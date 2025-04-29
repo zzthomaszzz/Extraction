@@ -24,10 +24,10 @@ class FogOfWar:
     def draw(self):
         for i in self.nodes:
             for node in i:
-                if not node.traversable:
-                    pygame.draw.rect(pygame.display.get_surface(), "red", node.rect)
                 if not node.discovered:
                     pygame.draw.rect(pygame.display.get_surface(), "black", node.rect)
+                if not node.traversable:
+                    pygame.draw.rect(pygame.display.get_surface(), "red", node.rect)
 
     def setObstacles(self, obstacle_list):
         for obstacle in obstacle_list:

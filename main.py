@@ -14,13 +14,14 @@ running = True
 dt = 0
 
 player_list = []
-host = input("Enter host address: ")
-port = int(input("Enter port number: "))
+host = '127.0.0.1'
+port = 5000
 
-name = input("Enter your character name: ")
+name = "SUP"
 
 client = Client(host, port)
 
+fogGrid = FogOfWar(1280, 800)
 obstacle = [
     pygame.rect.Rect(200, 50, 50, 50),
     pygame.rect.Rect(1000, 500, 50, 50),
@@ -30,13 +31,12 @@ obstacle = [
     pygame.rect.Rect(250, 100, 50, 50)
 ]
 
-fogGrid = FogOfWar(1280, 800)
-
 fogGrid.setObstacles(obstacle)
+obstacle_list = fogGrid.getBlockedNode()
 
 player = Player(name)
 
-client.send_init(pickle.dumps(["init", player]))
+client.send_init(["init", player])
 
 def handleMovement(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
@@ -46,16 +46,16 @@ def handleMovement(_player):
     checkForCollisionVertical(_player, fogGrid.getBlockedNode()
                               )
 
-def checkForCollisionHorizontal(_player, obstacle_list):
-    for rect in obstacle_list:
+def checkForCollisionHorizontal(_player, _obstacle_list):
+    for rect in _obstacle_list:
         if _player.rect.colliderect(rect):
             if rect.left < _player.rect.right < rect.right:
                 _player.rect.right = rect.left
             elif rect.left < _player.rect.left < rect.right:
                 _player.rect.left = rect.right
 
-def checkForCollisionVertical(_player, obstacle_list):
-    for rect in obstacle_list:
+def checkForCollisionVertical(_player, _obstacle_list):
+    for rect in _obstacle_list:
         if _player.rect.colliderect(rect):
             if rect.top < _player.rect.top < rect.bottom:
                 _player.rect.top = rect.bottom
@@ -69,11 +69,20 @@ def checkVision(_player, nodes):
                 dist = math.hypot(_player.rect.centerx - node.rect.centerx, _player.rect.centery - node.rect.centery)
                 if dist <= _player.vision:
                     node.discovered = 1
+                    for obs in obstacle_list:
+                        if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx, node.rect.centery):
+                            node.discovered = 0
+                            break
+
             #To remove vision
             else:
                 dist = math.hypot(_player.rect.centerx - node.rect.centerx, _player.rect.centery - node.rect.centery)
                 if dist > _player.vision:
                     node.discovered = 0
+                for obs in obstacle_list:
+                    if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx, node.rect.centery):
+                        node.discovered = 0
+                        break
 
 
 while running:
@@ -107,17 +116,13 @@ while running:
     screen.fill("purple")
     player_list = client.send(["position", player])
 
-    pygame.draw.rect(screen, "white", fogGrid.getPlayerNode(player))
-    fogGrid.draw()
-    for i in obstacle:
-        pygame.draw.rect(screen, "blue", i)
-
-
-    handleMovement(player)
-
     for opponent in player_list:
         if opponent.name != name:
             pygame.draw.rect(screen, "orange", opponent.rect)
+    fogGrid.draw()
+
+
+    handleMovement(player)
     checkVision(player, fogGrid.nodes)
 
     pygame.draw.rect(screen, "yellow", player.rect)
