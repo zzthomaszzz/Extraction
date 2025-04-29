@@ -2,11 +2,12 @@ import pygame
 
 class Player:
 
-    def __init__(self):
+    def __init__(self, name):
         self.rect = pygame.rect.Rect(0, 0, 32, 32)
         self.speed = 250
         self.left, self.right, self.up, self.down = 0, 0, 0, 0
         self.vision = 400
+        self.name = name
 
     def update(self, dt):
         self.rect.x += (self.right - self.left) * self.speed * dt

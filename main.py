@@ -2,6 +2,8 @@ import math
 import pygame
 from player import Player
 from fogOfWar import FogOfWar
+from client import Client
+import pickle
 
 # pygame setup
 pygame.init()
@@ -10,6 +12,14 @@ screen = pygame.display.set_mode((1280, 800))
 clock = pygame.time.Clock()
 running = True
 dt = 0
+
+player_list = []
+host = input("Enter host address: ")
+port = int(input("Enter port number: "))
+
+name = input("Enter your character name: ")
+
+client = Client(host, port)
 
 obstacle = [
     pygame.rect.Rect(200, 50, 50, 50),
@@ -24,7 +34,9 @@ fogGrid = FogOfWar(1280, 800)
 
 fogGrid.setObstacles(obstacle)
 
-player = Player()
+player = Player(name)
+
+client.send_init(pickle.dumps(["init", player]))
 
 def handleMovement(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
@@ -93,6 +105,7 @@ while running:
 
     # fill the screen with a color to wipe away anything from last frame
     screen.fill("purple")
+    player_list = client.send(["position", player])
 
     pygame.draw.rect(screen, "white", fogGrid.getPlayerNode(player))
     fogGrid.draw()
@@ -100,8 +113,11 @@ while running:
         pygame.draw.rect(screen, "blue", i)
 
 
-
     handleMovement(player)
+
+    for opponent in player_list:
+        if opponent.name != name:
+            pygame.draw.rect(screen, "orange", opponent.rect)
     checkVision(player, fogGrid.nodes)
 
     pygame.draw.rect(screen, "yellow", player.rect)
