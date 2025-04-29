@@ -7,7 +7,7 @@ player_list = []
 def handle_client(client, address):
     print(f"Accepted connection from {address}")
     init = client.recv(1024)
-    process_data(pickle.loads(init))
+    player_name = process_data(pickle.loads(init))
     try:
         while True:
             data = client.recv(1024)
@@ -19,12 +19,15 @@ def handle_client(client, address):
         print(f"Error handling client {address}: {e}")
     finally:
         client.close()
+        for player in player_list:
+            if player.name == player_name:
+                player_list.remove(player)
         print(f"Connection with {address} closed")
 
 def process_data(data):
     if data[0] == "init":
         player_list.append(data[1])
-        return True
+        return data[1].name
     elif data[0] == "position":
         for player in player_list:
             if player.name == data[1].name:
