@@ -12,10 +12,19 @@ clock = pygame.time.Clock()
 running = True
 dt = 0
 
+
+#Global Data
+#Where the server sending back to this machine (client)
 player_list = []
 
-#INPUTS
+#client data
 game_map = pygame.image.load("asset/map.png")
+soldier = pygame.image.load("asset/soldier.png")
+alien = pygame.image.load("asset/alien.png")
+default_player = pygame.image.load("asset/default_player.png")
+
+
+#INPUTS
 host = "127.0.0.1"
 port = 5000
 choice = "soldier"
@@ -141,18 +150,31 @@ while running:
 
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
+
+    #return [id, position, name] of other players
     player_list = client.send(["position", player])
 
     for opponent in player_list:
         if opponent.id != player.id:
-            pygame.draw.rect(screen, "orange", opponent.rect)
+            if opponent.name == "soldier":
+                screen.blit(soldier, (opponent.rect.x, opponent.rect.y))
+            if opponent.name == "alien":
+                screen.blit(alien, (opponent.rect.x, opponent.rect.y))
+            if opponent.name == "default player":
+                screen.blit(default_player, (opponent.rect.x, opponent.rect.y))
+
     fogGrid.draw()
 
 
     handleMovement(player)
     checkVision(player, fogGrid.nodes)
 
-    pygame.draw.rect(screen, "yellow", player.rect)
+    if player.name == "soldier":
+        screen.blit(soldier, (player.rect.x, player.rect.y))
+    elif player.name == "alien":
+        screen.blit(alien, (player.rect.x, player.rect.y))
+    elif player.name == "default player":
+        screen.blit(default_player, (player.rect.x, player.rect.y))
 
 
     # flip() the display to put your work on screen

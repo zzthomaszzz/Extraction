@@ -37,9 +37,11 @@ def handle_client(client, address, _id):
 def init_pack(data, _id):
     if data[0] == "init":
         if data[1] == "soldier":
-            print("Client selected soldier")
             player_list.append(Soldier(_id))
             return Soldier(_id)
+        elif data[1] == "alien":
+            player_list.append(Alien(_id))
+            return Alien(_id)
         else:
             player_list.append(Player(_id))
             return Player(_id)
