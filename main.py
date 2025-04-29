@@ -1,8 +1,8 @@
-import math
 import pygame
 from fogOfWar import FogOfWar
 from client import Client
-import pickle
+import math
+from projectile import Projectile
 
 # pygame setup
 pygame.init()
@@ -16,6 +16,7 @@ dt = 0
 #Global Data
 #Where the server sending back to this machine (client)
 player_list = []
+bullet_list = []
 
 #client data
 game_map = pygame.image.load("asset/map.png")
@@ -27,7 +28,7 @@ default_player = pygame.image.load("asset/default_player.png")
 #INPUTS
 host = "127.0.0.1"
 port = 5000
-choice = "soldier"
+choice = "alien"
 
 client = Client(host, port)
 
@@ -69,7 +70,7 @@ def handleMovement(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
     if _player.rect.x < 0:
         _player.rect.x = 0
-    if _player.rect.x + 32 >1280:
+    if _player.rect.x + 32 > 1280:
         _player.rect.x = 1280-32
     checkForCollisionHorizontal(_player, fogGrid.getBlockedNode())
 
@@ -127,6 +128,14 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                deltaX = pygame.mouse.get_pos()[0] - player.rect.centerx
+                deltaY = pygame.mouse.get_pos()[1] - player.rect.centery
+                angle = math.atan2(deltaY, deltaX)
+                velY = round(math.sin(angle), 2)
+                velX = round(math.cos(angle), 2)
+                bullet_list.append(Projectile(player.rect.centerx, player.rect.centery, player.id, pygame.Vector2(velX, velY)))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_a:
                 player.left = 1
@@ -163,8 +172,12 @@ while running:
             if opponent.name == "default player":
                 screen.blit(default_player, (opponent.rect.x, opponent.rect.y))
 
-    fogGrid.draw()
+    for stuff in bullet_list:
+        if stuff.id != player.id:
+            stuff.update(dt)
+            pygame.draw.rect(screen, "cyan", stuff.rect)
 
+    fogGrid.draw()
 
     handleMovement(player)
     checkVision(player, fogGrid.nodes)
@@ -176,7 +189,15 @@ while running:
     elif player.name == "default player":
         screen.blit(default_player, (player.rect.x, player.rect.y))
 
+    pygame.draw.line(screen, "white", player.rect.center, pygame.mouse.get_pos())
 
+    for bullets in bullet_list:
+        bullets.update(dt)
+        if bullets.rect.x < 0 or bullets.rect.x + bullets.size > 1270 or bullets.rect.y < 0 or bullets.rect.y + bullets.size > 790:
+            bullet_list.remove(bullets)
+        elif not fogGrid.getEntityNode(bullets).traversable:
+            bullet_list.remove(bullets)
+        pygame.draw.rect(screen, "green", bullets.rect)
     # flip() the display to put your work on screen
     pygame.display.flip()
 

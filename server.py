@@ -6,6 +6,7 @@ from player import *
 
 player_list = []
 client_list = []
+projectile_list = []
 
 def handle_client(client, address, _id):
     print(f"Accepted connection from {address}")

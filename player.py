@@ -10,6 +10,7 @@ class Player:
         self.vision = 100
         self.image_path = "asset/default_player.png"
         self.id = _id
+        self.projectile = []
 
     def update(self, dt):
         self.rect.x += (self.right - self.left) * self.speed * dt

@@ -42,9 +42,9 @@ class FogOfWar:
                     blocked_nodes.append(node.rect)
         return blocked_nodes
 
-    def getPlayerNode(self, _player):
-        x = _player.rect.x / self.sizeX
-        y = _player.rect.y / self.sizeY
+    def getEntityNode(self, _entity):
+        x = _entity.rect.x / self.sizeX
+        y = _entity.rect.y / self.sizeY
         x *= self.nodeX
         y *= self.nodeY
-        return self.nodes[round(y)][round(x)].rect
+        return self.nodes[round(y)][round(x)]
