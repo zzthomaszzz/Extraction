@@ -14,10 +14,10 @@ running = True
 dt = 0
 
 player_list = []
-host = '127.0.0.1'
-port = 5000
+host = input("Enter host address here: ")
+port = int(input("Enter port here: "))
 
-name = "SUP"
+name = input("Enter your character name")
 
 client = Client(host, port)
 
