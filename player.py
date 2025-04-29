@@ -4,9 +4,9 @@ class Player:
 
     def __init__(self, name):
         self.rect = pygame.rect.Rect(0, 0, 32, 32)
-        self.speed = 250
+        self.speed = 150
         self.left, self.right, self.up, self.down = 0, 0, 0, 0
-        self.vision = 400
+        self.vision = 200
         self.name = name
 
     def update(self, dt):

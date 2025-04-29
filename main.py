@@ -14,21 +14,38 @@ running = True
 dt = 0
 
 player_list = []
-host = input("Enter host address here: ")
-port = int(input("Enter port here: "))
+game_map = pygame.image.load("asset/map.png")
+host = input("Enter host address: ")
+port = int(input("Enter port: "))
 
-name = input("Enter your character name")
+name = input("Enter your character name: ")
 
 client = Client(host, port)
 
 fogGrid = FogOfWar(1280, 800)
 obstacle = [
-    pygame.rect.Rect(200, 50, 50, 50),
-    pygame.rect.Rect(1000, 500, 50, 50),
-    pygame.rect.Rect(200, 600, 50, 50),
-    pygame.rect.Rect(500, 230, 32, 50),
-    pygame.rect.Rect(250, 50, 50, 50),
-    pygame.rect.Rect(250, 100, 50, 50)
+    pygame.rect.Rect(288, 64, 95, 95),
+    pygame.rect.Rect(384, 96, 31, 31),
+    pygame.rect.Rect(384, 320, 31, 63),
+    pygame.rect.Rect(416, 320, 31, 31),
+    pygame.rect.Rect(64, 512, 95, 127),
+    pygame.rect.Rect(160, 544, 127, 159),
+    pygame.rect.Rect(352, 448, 31, 63),
+    pygame.rect.Rect(384, 480, 31, 31),
+    pygame.rect.Rect(512, 448, 95, 31),
+    pygame.rect.Rect(576, 416, 31, 31),
+    pygame.rect.Rect(576, 320, 63, 31),
+    pygame.rect.Rect(544, 544, 31, 95),
+    pygame.rect.Rect(576, 576, 95, 95),
+    pygame.rect.Rect(672, 576, 95, 31),
+    pygame.rect.Rect(768, 512, 127, 95),
+    pygame.rect.Rect(896, 576, 95, 63),
+    pygame.rect.Rect(832, 256, 159, 63),
+    pygame.rect.Rect(960, 224, 31, 31),
+    pygame.rect.Rect(864, 320, 127, 31),
+    pygame.rect.Rect(896, 352, 95, 31),
+    pygame.rect.Rect(1024, 128, 159, 191),
+    pygame.rect.Rect(1088, 96, 95, 31),
 ]
 
 fogGrid.setObstacles(obstacle)
@@ -69,20 +86,22 @@ def checkVision(_player, nodes):
                 dist = math.hypot(_player.rect.centerx - node.rect.centerx, _player.rect.centery - node.rect.centery)
                 if dist <= _player.vision:
                     node.discovered = 1
-                    for obs in obstacle_list:
+                    for obs in obstacle:
                         if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx, node.rect.centery):
-                            node.discovered = 0
-                            break
+                            if node.traversable:
+                                node.discovered = 0
+                                break
 
             #To remove vision
             else:
                 dist = math.hypot(_player.rect.centerx - node.rect.centerx, _player.rect.centery - node.rect.centery)
                 if dist > _player.vision:
                     node.discovered = 0
-                for obs in obstacle_list:
+                for obs in obstacle:
                     if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx, node.rect.centery):
-                        node.discovered = 0
-                        break
+                        if node.traversable:
+                            node.discovered = 0
+                            break
 
 
 while running:
@@ -102,6 +121,8 @@ while running:
                 player.up = 1
             if event.key == pygame.K_ESCAPE:
                 running = False
+            if event.key == pygame.K_t:
+                print(player.rect.x, player.rect.y)
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
                 player.left = 0
@@ -113,7 +134,7 @@ while running:
                 player.up = 0
 
     # fill the screen with a color to wipe away anything from last frame
-    screen.fill("purple")
+    screen.blit(game_map, (0, 0))
     player_list = client.send(["position", player])
 
     for opponent in player_list:
