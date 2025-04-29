@@ -57,11 +57,18 @@ client.send_init(["init", player])
 
 def handleMovement(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
+    if _player.rect.x < 0:
+        _player.rect.x = 0
+    if _player.rect.x + 32 >1280:
+        _player.rect.x = 1280-32
     checkForCollisionHorizontal(_player, fogGrid.getBlockedNode())
 
     player.rect.y += (player.down - player.up) * player.speed * dt
-    checkForCollisionVertical(_player, fogGrid.getBlockedNode()
-                              )
+    if _player.rect.y < 0:
+        _player.rect.y = 0
+    if _player.rect.y + 32 > 800:
+        _player.rect.y = 800-32
+    checkForCollisionVertical(_player, fogGrid.getBlockedNode())
 
 def checkForCollisionHorizontal(_player, _obstacle_list):
     for rect in _obstacle_list:
