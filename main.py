@@ -1,6 +1,5 @@
 import math
 import pygame
-from player import Player
 from fogOfWar import FogOfWar
 from client import Client
 import pickle
@@ -14,11 +13,12 @@ running = True
 dt = 0
 
 player_list = []
-game_map = pygame.image.load("asset/map.png")
-host = input("Enter host address: ")
-port = int(input("Enter port: "))
 
-name = input("Enter your character name: ")
+#INPUTS
+game_map = pygame.image.load("asset/map.png")
+host = "127.0.0.1"
+port = 5000
+choice = "soldier"
 
 client = Client(host, port)
 
@@ -51,9 +51,10 @@ obstacle = [
 fogGrid.setObstacles(obstacle)
 obstacle_list = fogGrid.getBlockedNode()
 
-player = Player(name)
 
-client.send_init(["init", player])
+#Server init
+player = client.send(["init", choice])
+
 
 def handleMovement(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
@@ -128,8 +129,6 @@ while running:
                 player.up = 1
             if event.key == pygame.K_ESCAPE:
                 running = False
-            if event.key == pygame.K_t:
-                print(player.rect.x, player.rect.y)
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
                 player.left = 0
@@ -145,7 +144,7 @@ while running:
     player_list = client.send(["position", player])
 
     for opponent in player_list:
-        if opponent.name != name:
+        if opponent.id != player.id:
             pygame.draw.rect(screen, "orange", opponent.rect)
     fogGrid.draw()
 

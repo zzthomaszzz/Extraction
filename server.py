@@ -1,13 +1,20 @@
 import socket
 import threading
 import pickle
+import random
+from player import *
 
 player_list = []
+client_list = []
 
-def handle_client(client, address):
+def handle_client(client, address, _id):
     print(f"Accepted connection from {address}")
+
+    client_list.append(client)
     init = client.recv(1024)
-    player_name = process_data(pickle.loads(init))
+    init_reply = init_pack(pickle.loads(init), _id)
+    client.sendall(pickle.dumps(init_reply))
+
     try:
         while True:
             data = client.recv(1024)
@@ -20,17 +27,27 @@ def handle_client(client, address):
     finally:
         client.close()
         for player in player_list:
-            if player.name == player_name:
+            if player.id == _id:
                 player_list.remove(player)
+        if client in client_list:
+            client_list.remove(client)
+
         print(f"Connection with {address} closed")
 
-def process_data(data):
+def init_pack(data, _id):
     if data[0] == "init":
-        player_list.append(data[1])
-        return data[1].name
-    elif data[0] == "position":
+        if data[1] == "soldier":
+            print("Client selected soldier")
+            player_list.append(Soldier(_id))
+            return Soldier(_id)
+    else:
+        player_list.append(Player(_id))
+        return Player(_id)
+
+def process_data(data):
+    if data[0] == "position":
         for player in player_list:
-            if player.name == data[1].name:
+            if player.id == data[1].id:
                 player.rect = data[1].rect
         return player_list
     else:
@@ -47,7 +64,8 @@ def start_server():
     print(f"Server listening on {host}:{port}")
     while True:
         client_socket, addr = server_socket.accept()
-        client_thread = threading.Thread(target=handle_client, args=(client_socket, addr))
+        client_id = random.random()
+        client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
         client_thread.daemon = True
         client_thread.start()
 

@@ -15,7 +15,8 @@ class Client:
     def send(self, data):
         self.client_socket.send(pickle.dumps(data))
         response = self.client_socket.recv(1024)
-        return pickle.loads(response)
+        response = pickle.loads(response)
+        return response
 
     def send_init(self,data):
         self.client_socket.send(pickle.dumps(data))
