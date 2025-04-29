@@ -40,9 +40,9 @@ def init_pack(data, _id):
             print("Client selected soldier")
             player_list.append(Soldier(_id))
             return Soldier(_id)
-    else:
-        player_list.append(Player(_id))
-        return Player(_id)
+        else:
+            player_list.append(Player(_id))
+            return Player(_id)
 
 def process_data(data):
     if data[0] == "position":
