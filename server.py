@@ -56,6 +56,7 @@ def process_data(data):
         for player in player_list:
             if player.id == data[1].id:
                 player.rect = data[1].rect
+                player.current_health = data[1].current_health
         return player_list
     elif data[0] == "projectile":
         for proj in projectile_list:

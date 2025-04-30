@@ -184,7 +184,7 @@ while running:
         if proj[0] != player_data.id:
             proj_list = proj[1]
             for entry in proj_list:
-                if entry.rect.collide_rect(player_data.rect):
+                if entry.rect.colliderect(player_data.rect):
                     player_data.current_health -= entry.damage
                     proj_list.remove(entry)
                 else:
@@ -206,11 +206,15 @@ while running:
 
 
     for proj in player_data.projectile:
+        for _player in player_list:
+            if proj.rect.colliderect(_player.rect):
+                player_data.remove(proj)
         proj.update(dt)
         if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
             player_data.projectile.remove(proj)
         elif not fogGrid.getEntityNode(proj).traversable:
             player_data.projectile.remove(proj)
+
         pygame.draw.rect(screen, "green", proj.rect)
     # flip() the display to put your work on screen
     pygame.display.flip()
