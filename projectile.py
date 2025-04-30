@@ -11,6 +11,7 @@ class Projectile:
         self.rect = pygame.rect.Rect(0, 0, self.size, self.size)
         self.rect.center = (self.x, self.y)
         self.velocity = velocity
+        self.damage = 50
 
     def update(self, dt):
         self.rect.x += self.velocity[0] * self.speed * dt

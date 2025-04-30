@@ -30,7 +30,7 @@ default_player = pygame.image.load("asset/default_player.png")
 #INPUTS
 host = input("Enter Host Address: ")
 port = int(input("Enter Port: "))
-choice = input("Choose between [soldier] - [alien]: ")
+choice = input("Choose between [soldier] or [alien]: ")
 
 client = Client(host, port)
 
@@ -166,35 +166,44 @@ while running:
     #return [id, position, name] of other players
     player_list = client.send(["position", player_data])
     projectile_list = client.send(["projectile", player_data.id, player_data.projectile])
+    if player_data.current_health <= 0:
+        player_data.isDead = True
 
     for entity in player_list:
         if entity.id != player_data.id:
-            if entity.name == "soldier":
-                screen.blit(soldier, (entity.rect.x, entity.rect.y))
-            if entity.name == "alien":
-                screen.blit(alien, (entity.rect.x, entity.rect.y))
-            if entity.name == "default player_data":
-                screen.blit(default_player, (entity.rect.x, entity.rect.y))
+            if not entity.isDead:
+                entity.draw_health_bar()
+                if entity.name == "soldier":
+                    screen.blit(soldier, (entity.rect.x, entity.rect.y))
+                if entity.name == "alien":
+                    screen.blit(alien, (entity.rect.x, entity.rect.y))
+                if entity.name == "default player_data":
+                    screen.blit(default_player, (entity.rect.x, entity.rect.y))
 
     for proj in projectile_list:
         if proj[0] != player_data.id:
             proj_list = proj[1]
             for entry in proj_list:
-                pygame.draw.rect(screen, "cyan", entry.rect)
+                if entry.rect.collide_rect(player_data.rect):
+                    player_data.current_health -= entry.damage
+                    proj_list.remove(entry)
+                else:
+                    pygame.draw.rect(screen, "cyan", entry.rect)
 
     fogGrid.draw()
 
     handleMovement(player_data)
     checkVision(player_data, fogGrid.nodes)
 
-    if player_data.name == "soldier":
-        screen.blit(soldier, (player_data.rect.x, player_data.rect.y))
-    elif player_data.name == "alien":
-        screen.blit(alien, (player_data.rect.x, player_data.rect.y))
-    elif player_data.name == "default player_data":
-        screen.blit(default_player, (player_data.rect.x, player_data.rect.y))
+    if not player_data.isDead:
+        player_data.draw_health_bar()
+        if player_data.name == "soldier":
+            screen.blit(soldier, (player_data.rect.x, player_data.rect.y))
+        elif player_data.name == "alien":
+            screen.blit(alien, (player_data.rect.x, player_data.rect.y))
+        elif player_data.name == "default player_data":
+            screen.blit(default_player, (player_data.rect.x, player_data.rect.y))
 
-    pygame.draw.line(screen, "white", player_data.rect.center, pygame.mouse.get_pos())
 
     for proj in player_data.projectile:
         proj.update(dt)
