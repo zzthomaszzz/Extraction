@@ -26,9 +26,9 @@ default_player = pygame.image.load("asset/default_player.png")
 
 
 #INPUTS
-host = "127.0.0.1"
-port = 5000
-choice = "alien"
+host = input("Enter Host Address: ")
+port = int(input("Enter Port: "))
+choice = input("Choose between [soldier] - [alien]: ")
 
 client = Client(host, port)
 
