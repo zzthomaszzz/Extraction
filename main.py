@@ -207,8 +207,8 @@ while running:
 
     for proj in player_data.projectile:
         for _player in player_list:
-            if proj.rect.colliderect(_player.rect):
-                player_data.remove(proj)
+            if proj.rect.colliderect(_player.rect) and _player.id != player_data.id:
+                player_data.projectile.remove(proj)
         proj.update(dt)
         if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
             player_data.projectile.remove(proj)
