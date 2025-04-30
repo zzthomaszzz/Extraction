@@ -16,7 +16,7 @@ dt = 0
 #Global Data
 #Where the server sending back to this machine (client)
 player_list = []
-bullet_list = []
+projectile_list = []
 
 #client data
 game_map = pygame.image.load("asset/map.png")
@@ -135,7 +135,7 @@ while running:
                 angle = math.atan2(deltaY, deltaX)
                 velY = round(math.sin(angle), 2)
                 velX = round(math.cos(angle), 2)
-                bullet_list.append(Projectile(player.rect.centerx, player.rect.centery, player.id, pygame.Vector2(velX, velY)))
+                player.projectile.append(Projectile(player.rect.centerx, player.rect.centery, player.id, pygame.Vector2(velX, velY)))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_a:
                 player.left = 1
@@ -162,20 +162,22 @@ while running:
 
     #return [id, position, name] of other players
     player_list = client.send(["position", player])
+    projectile_list = client.send(["projectile", player.projectile])
 
-    for opponent in player_list:
-        if opponent.id != player.id:
-            if opponent.name == "soldier":
-                screen.blit(soldier, (opponent.rect.x, opponent.rect.y))
-            if opponent.name == "alien":
-                screen.blit(alien, (opponent.rect.x, opponent.rect.y))
-            if opponent.name == "default player":
-                screen.blit(default_player, (opponent.rect.x, opponent.rect.y))
+    for entity in player_list:
+        if entity.id != player.id:
+            if entity.name == "soldier":
+                screen.blit(soldier, (entity.rect.x, entity.rect.y))
+            if entity.name == "alien":
+                screen.blit(alien, (entity.rect.x, entity.rect.y))
+            if entity.name == "default player":
+                screen.blit(default_player, (entity.rect.x, entity.rect.y))
 
-    for stuff in bullet_list:
-        if stuff.id != player.id:
-            stuff.update(dt)
-            pygame.draw.rect(screen, "cyan", stuff.rect)
+    for proj in projectile_list:
+        if proj[0] != player.id:
+            proj_list = proj[1]
+            for entry in proj_list:
+                pygame.draw.rect(screen, "cyan", entry.rect)
 
     fogGrid.draw()
 
@@ -191,13 +193,13 @@ while running:
 
     pygame.draw.line(screen, "white", player.rect.center, pygame.mouse.get_pos())
 
-    for bullets in bullet_list:
-        bullets.update(dt)
-        if bullets.rect.x < 0 or bullets.rect.x + bullets.size > 1270 or bullets.rect.y < 0 or bullets.rect.y + bullets.size > 790:
-            bullet_list.remove(bullets)
-        elif not fogGrid.getEntityNode(bullets).traversable:
-            bullet_list.remove(bullets)
-        pygame.draw.rect(screen, "green", bullets.rect)
+    for proj in player.projectile:
+        proj.update(dt)
+        if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
+            player.projectile.remove(proj)
+        elif not fogGrid.getEntityNode(proj).traversable:
+            player.projectile.remove(proj)
+        pygame.draw.rect(screen, "green", proj.rect)
     # flip() the display to put your work on screen
     pygame.display.flip()
 

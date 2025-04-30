@@ -30,6 +30,9 @@ def handle_client(client, address, _id):
         for player in player_list:
             if player.id == _id:
                 player_list.remove(player)
+        for proj in projectile_list:
+            if proj[0] == _id:
+                projectile_list.remove(proj)
         if client in client_list:
             client_list.remove(client)
 
@@ -37,6 +40,7 @@ def handle_client(client, address, _id):
 
 def init_pack(data, _id):
     if data[0] == "init":
+        projectile_list.append([_id, None])
         if data[1] == "soldier":
             player_list.append(Soldier(_id))
             return Soldier(_id)
@@ -53,6 +57,11 @@ def process_data(data):
             if player.id == data[1].id:
                 player.rect = data[1].rect
         return player_list
+    elif data[0] == "projectile":
+        for proj in projectile_list:
+            if proj[0] == data[0]:
+                proj[1] = data[1]
+        return projectile_list
     else:
         return data
 
