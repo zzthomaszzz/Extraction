@@ -138,7 +138,7 @@ while running:
                 velY = round(math.sin(angle), 2)
                 velX = round(math.cos(angle), 2)
                 if len(player_data.projectile) < player_data.max_projectile:
-                    player_data.projectile.append(Projectile(player_data.rect.centerx, player_data.rect.centery, player_data.id, pygame.Vector2(velX, velY)))
+                    player_data.projectile.append(Projectile(player_data.rect.centerx, player_data.rect.centery, player_data.id, pygame.Vector2(velX, velY), player_data.projectile_speed))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_a:
                 player_data.left = 1
@@ -190,6 +190,19 @@ while running:
                 else:
                     pygame.draw.rect(screen, "cyan", entry.rect)
 
+    for proj in player_data.projectile:
+        for _player in player_list:
+            if proj.rect.colliderect(_player.rect) and _player.id != player_data.id:
+                player_data.projectile.remove(proj)
+        proj.update(dt)
+        if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
+            player_data.projectile.remove(proj)
+        elif not fogGrid.getEntityNode(proj).traversable:
+            player_data.projectile.remove(proj)
+
+
+        pygame.draw.rect(screen, "green", proj.rect)
+
     fogGrid.draw()
 
     handleMovement(player_data)
@@ -205,17 +218,6 @@ while running:
             screen.blit(default_player, (player_data.rect.x, player_data.rect.y))
 
 
-    for proj in player_data.projectile:
-        for _player in player_list:
-            if proj.rect.colliderect(_player.rect) and _player.id != player_data.id:
-                player_data.projectile.remove(proj)
-        proj.update(dt)
-        if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
-            player_data.projectile.remove(proj)
-        elif not fogGrid.getEntityNode(proj).traversable:
-            player_data.projectile.remove(proj)
-
-        pygame.draw.rect(screen, "green", proj.rect)
     # flip() the display to put your work on screen
     pygame.display.flip()
 

@@ -14,6 +14,7 @@ class Player:
         self.id = _id
         self.projectile = []
         self.max_projectile = 3
+        self.projectile_speed = 300
         self.isDead = False
 
     def update(self, dt):
@@ -36,6 +37,7 @@ class Soldier(Player):
         self.vision = 500
         self.max_health = 500
         self.current_health = 500
+        self.projectile_speed = 500
         self.image_path = "asset/soldier.png"
 
 class Alien(Player):
@@ -46,5 +48,7 @@ class Alien(Player):
         self.speed = 300
         self.max_health = 800
         self.current_health = 800
+        self.max_projectile = 4
+        self.projectile_speed = 400
         self.vision = 200
         self.image_path = "asset/alien.png"
