@@ -162,7 +162,7 @@ while running:
 
     #return [id, position, name] of other players
     player_list = client.send(["position", player])
-    projectile_list = client.send(["projectile", player.projectile])
+    projectile_list = client.send(["projectile", player.id, player.projectile])
 
     for entity in player_list:
         if entity.id != player.id:

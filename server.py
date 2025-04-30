@@ -40,7 +40,7 @@ def handle_client(client, address, _id):
 
 def init_pack(data, _id):
     if data[0] == "init":
-        projectile_list.append([_id, None])
+        projectile_list.append([_id, []])
         if data[1] == "soldier":
             player_list.append(Soldier(_id))
             return Soldier(_id)
@@ -59,8 +59,8 @@ def process_data(data):
         return player_list
     elif data[0] == "projectile":
         for proj in projectile_list:
-            if proj[0] == data[0]:
-                proj[1] = data[1]
+            if proj[0] == data[1]:
+                proj[1] = data[2]
         return projectile_list
     else:
         return data
