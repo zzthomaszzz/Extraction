@@ -557,6 +557,7 @@
   ('platform',
    'C:\\Users\\Thomas\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\platform.py',
    'PYMODULE'),
+  ('player', 'C:\\Users\\Thomas\\Desktop\\Extraction\\player.py', 'PYMODULE'),
   ('plistlib',
    'C:\\Users\\Thomas\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\plistlib.py',
    'PYMODULE'),

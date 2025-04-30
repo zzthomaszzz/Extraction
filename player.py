@@ -4,13 +4,14 @@ class Player:
 
     def __init__(self, _id):
         self.rect = pygame.rect.Rect(0, 0, 32, 32)
-        self.name = "default player"
+        self.name = "default player_data"
         self.speed = 100
         self.left, self.right, self.up, self.down = 0, 0, 0, 0
         self.vision = 100
         self.image_path = "asset/default_player.png"
         self.id = _id
         self.projectile = []
+        self.max_projectile = 3
 
     def update(self, dt):
         self.rect.x += (self.right - self.left) * self.speed * dt

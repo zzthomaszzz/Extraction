@@ -1,7 +1,9 @@
-import pygame
-from fogOfWar import FogOfWar
-from client import Client
 import math
+import player
+import pygame
+
+from client import Client
+from fogOfWar import FogOfWar
 from projectile import Projectile
 
 # pygame setup
@@ -63,7 +65,7 @@ obstacle_list = fogGrid.getBlockedNode()
 
 
 #Server init
-player = client.send(["init", choice])
+player_data = client.send(["init", choice])
 
 
 def handleMovement(_player):
@@ -74,7 +76,7 @@ def handleMovement(_player):
         _player.rect.x = 1280-32
     checkForCollisionHorizontal(_player, fogGrid.getBlockedNode())
 
-    player.rect.y += (player.down - player.up) * player.speed * dt
+    _player.rect.y += (_player.down - _player.up) * _player.speed * dt
     if _player.rect.y < 0:
         _player.rect.y = 0
     if _player.rect.y + 32 > 800:
@@ -130,75 +132,76 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                deltaX = pygame.mouse.get_pos()[0] - player.rect.centerx
-                deltaY = pygame.mouse.get_pos()[1] - player.rect.centery
+                deltaX = pygame.mouse.get_pos()[0] - player_data.rect.centerx
+                deltaY = pygame.mouse.get_pos()[1] - player_data.rect.centery
                 angle = math.atan2(deltaY, deltaX)
                 velY = round(math.sin(angle), 2)
                 velX = round(math.cos(angle), 2)
-                player.projectile.append(Projectile(player.rect.centerx, player.rect.centery, player.id, pygame.Vector2(velX, velY)))
+                if len(player_data.projectile) < player_data.max_projectile:
+                    player_data.projectile.append(Projectile(player_data.rect.centerx, player_data.rect.centery, player_data.id, pygame.Vector2(velX, velY)))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_a:
-                player.left = 1
+                player_data.left = 1
             if event.key == pygame.K_d:
-                player.right = 1
+                player_data.right = 1
             if event.key == pygame.K_s:
-                player.down = 1
+                player_data.down = 1
             if event.key == pygame.K_w:
-                player.up = 1
+                player_data.up = 1
             if event.key == pygame.K_ESCAPE:
                 running = False
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
-                player.left = 0
+                player_data.left = 0
             if event.key == pygame.K_d:
-                player.right = 0
+                player_data.right = 0
             if event.key == pygame.K_s:
-                player.down = 0
+                player_data.down = 0
             if event.key == pygame.K_w:
-                player.up = 0
+                player_data.up = 0
 
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
 
     #return [id, position, name] of other players
-    player_list = client.send(["position", player])
-    projectile_list = client.send(["projectile", player.id, player.projectile])
+    player_list = client.send(["position", player_data])
+    projectile_list = client.send(["projectile", player_data.id, player_data.projectile])
 
     for entity in player_list:
-        if entity.id != player.id:
+        if entity.id != player_data.id:
             if entity.name == "soldier":
                 screen.blit(soldier, (entity.rect.x, entity.rect.y))
             if entity.name == "alien":
                 screen.blit(alien, (entity.rect.x, entity.rect.y))
-            if entity.name == "default player":
+            if entity.name == "default player_data":
                 screen.blit(default_player, (entity.rect.x, entity.rect.y))
 
     for proj in projectile_list:
-        if proj[0] != player.id:
+        if proj[0] != player_data.id:
             proj_list = proj[1]
             for entry in proj_list:
                 pygame.draw.rect(screen, "cyan", entry.rect)
 
     fogGrid.draw()
 
-    handleMovement(player)
-    checkVision(player, fogGrid.nodes)
+    handleMovement(player_data)
+    checkVision(player_data, fogGrid.nodes)
 
-    if player.name == "soldier":
-        screen.blit(soldier, (player.rect.x, player.rect.y))
-    elif player.name == "alien":
-        screen.blit(alien, (player.rect.x, player.rect.y))
-    elif player.name == "default player":
-        screen.blit(default_player, (player.rect.x, player.rect.y))
+    if player_data.name == "soldier":
+        screen.blit(soldier, (player_data.rect.x, player_data.rect.y))
+    elif player_data.name == "alien":
+        screen.blit(alien, (player_data.rect.x, player_data.rect.y))
+    elif player_data.name == "default player_data":
+        screen.blit(default_player, (player_data.rect.x, player_data.rect.y))
 
-    pygame.draw.line(screen, "white", player.rect.center, pygame.mouse.get_pos())
+    pygame.draw.line(screen, "white", player_data.rect.center, pygame.mouse.get_pos())
 
-    for proj in player.projectile:
+    for proj in player_data.projectile:
         proj.update(dt)
         if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
-            player.projectile.remove(proj)
+            player_data.projectile.remove(proj)
         elif not fogGrid.getEntityNode(proj).traversable:
-            player.projectile.remove(proj)
+            player_data.projectile.remove(proj)
         pygame.draw.rect(screen, "green", proj.rect)
     # flip() the display to put your work on screen
     pygame.display.flip()
