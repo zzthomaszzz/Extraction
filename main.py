@@ -2,7 +2,7 @@ import math
 import pygame
 
 from client import Client
-from fogOfWar import FogOfWar
+from mapSystem import MapSystem
 from projectile import Projectile
 
 # pygame setup
@@ -40,13 +40,11 @@ default_player = pygame.image.load("asset/default_player.png")
 #INPUTS
 host = "127.0.0.1"
 port = 5000
-choice = "soldier"
+character_choice = "soldier"
 
 client = Client(host, port)
 
-fogGrid = FogOfWar(1280, 800)
-
-obstacle = [
+obstacles = [
     pygame.rect.Rect(288, 64, 95, 95),
     pygame.rect.Rect(384, 96, 31, 31),
     pygame.rect.Rect(384, 320, 31, 63),
@@ -71,10 +69,10 @@ obstacle = [
     pygame.rect.Rect(1088, 96, 95, 31),
 ]
 
-fogGrid.setObstacles(obstacle)
+map_system = MapSystem(1280, 800, obstacles)
 
 #Server init
-player = client.send(["initialize", choice])
+player = client.send(["initialize", character_choice])
 
 
 def handle_player(_player):
@@ -83,14 +81,14 @@ def handle_player(_player):
         _player.rect.x = 0
     if _player.rect.x + 32 > 1280:
         _player.rect.x = 1280 - 32
-    adjust_horizontal(_player, obstacle)
+    adjust_horizontal(_player, map_system.obstacles)
 
     _player.rect.y += (_player.down - _player.up) * _player.speed * dt
     if _player.rect.y < 0:
         _player.rect.y = 0
     if _player.rect.y + 32 > 800:
         _player.rect.y = 800 - 32
-    adjust_vertical(_player, obstacle)
+    adjust_vertical(_player, map_system.obstacles)
 
 
 def handle_projectile(_projectiles):
@@ -98,7 +96,7 @@ def handle_projectile(_projectiles):
         _projectile.update(dt)
         if _projectile.rect.x < 0 or _projectile.rect.x + _projectile.size > 1280 or _projectile.rect.y < 0 or _projectile.rect.y + _projectile.size > 800:
             _projectiles.remove(_projectile)
-        elif _projectile.rect.collidelist(obstacle) >= 0:
+        elif _projectile.rect.collidelist(obstacles) >= 0:
             _projectiles.remove(_projectile)
 
 
@@ -107,8 +105,10 @@ def adjust_horizontal(_player, _obstacle_list):
         if _player.rect.colliderect(rect):
             if rect.left < _player.rect.right < rect.right:
                 _player.rect.right = rect.left
+                break
             elif rect.left < _player.rect.left < rect.right:
                 _player.rect.left = rect.right
+                break
 
 
 def adjust_vertical(_player, _obstacle_list):
@@ -116,34 +116,10 @@ def adjust_vertical(_player, _obstacle_list):
         if _player.rect.colliderect(rect):
             if rect.top < _player.rect.top < rect.bottom:
                 _player.rect.top = rect.bottom
+                break
             elif rect.top < _player.rect.bottom < rect.bottom:
                 _player.rect.bottom = rect.top
-
-
-def update_fog(_player, nodes):
-    for item in nodes:
-        for node in item:
-            if not node.discovered:
-                dist = math.hypot(_player.rect.centerx - node.rect.centerx, _player.rect.centery - node.rect.centery)
-                if dist <= _player.vision:
-                    node.discovered = 1
-                    for obs in obstacle:
-                        if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx,
-                                        node.rect.centery):
-                            if node.traversable:
-                                node.discovered = 0
-                                break
-
-            #To remove vision
-            else:
-                dist = math.hypot(_player.rect.centerx - node.rect.centerx, _player.rect.centery - node.rect.centery)
-                if dist > _player.vision:
-                    node.discovered = 0
-                for obs in obstacle:
-                    if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx, node.rect.centery):
-                        if node.traversable:
-                            node.discovered = 0
-                            break
+                break
 
 
 while running:
@@ -212,13 +188,13 @@ while running:
         for projectile in all_player_projectile[entity]:
             pygame.draw.rect(screen, "red", projectile, 1)
 
-    fogGrid.draw()
+    map_system.draw()
 
     handle_player(player)
 
     handle_projectile(player.projectile)
 
-    update_fog(player, fogGrid.nodes)
+    map_system.handle_fog(map_system.getEntityNode(player), player.vision)
 
     # flip() the display to put your work on screen
     pygame.display.flip()

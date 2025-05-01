@@ -6,3 +6,4 @@ class Node:
         self.rect = pygame.rect.Rect(x, y, self.size, self.size)
         self.traversable = traversable
         self.discovered = 0
+        self.grid_id = [x / self.size, y / self.size]
