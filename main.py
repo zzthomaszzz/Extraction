@@ -39,9 +39,9 @@ default_player = pygame.image.load("asset/default_player.png")
 
 
 #INPUTS
-host = "127.0.0.1"
+host = input("Enter Host Address: ")
 port = 5000
-choice = "soldier"
+choice = input("[soldier] - [alien]: ")
 
 client = Client(host, port)
 
@@ -172,13 +172,13 @@ while running:
 
     #Resolving Server Data
 
-    # This will return all currently_active_player_id = [_id, _id, _id]
+    # This will return [_id, _id, _id]
     all_active_player = client.send(["all active player", player.id])
 
-    # This will return all_player_location = {"_id":[x, y], "_id":[x, y]}
+    # This will return {"_id":[x, y], "_id":[x, y]}
     all_player_location = client.send(["all location", [player.rect.x, player.rect.y]])
 
-    #
+    # This will return {"_id": "character name"}
     all_player_character = client.send(["all player character", player.id])
 
     # fill the screen with a color to wipe away anything from last frame
@@ -212,11 +212,8 @@ while running:
 
         pygame.draw.rect(screen, "green", proj.rect)
 
-    #fogGrid.draw()
-
-    handleMovement(player)
-    checkVision(player, fogGrid.nodes)
-
+    #Drawing all player
+    #Note that the main player character will not be covered by fog
     for entity in all_active_player:
         match all_player_character[entity]:
             case "soldier":
@@ -226,6 +223,12 @@ while running:
             case _:
                 _image = default_player
         screen.blit(_image, (all_player_location[entity]))
+
+    fogGrid.draw()
+
+    handleMovement(player)
+
+    checkVision(player, fogGrid.nodes)
 
 
     # flip() the display to put your work on screen
