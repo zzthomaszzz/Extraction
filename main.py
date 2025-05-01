@@ -1,5 +1,4 @@
 import math
-import player
 import pygame
 
 from client import Client
@@ -16,7 +15,19 @@ dt = 0
 
 
 #Global Data
-#Where the server sending back to this machine (client)
+#Where the server data will come through
+
+#list=[_id, _id, _id], We will need this to iterate through dictionaries
+all_active_player = []
+
+#dict={"_id": [x, y]}
+all_player_location = {}
+
+#dict={"_id": "character_name"}
+all_player_character = {}
+
+
+#Older version
 player_list = []
 projectile_list = []
 
@@ -28,9 +39,9 @@ default_player = pygame.image.load("asset/default_player.png")
 
 
 #INPUTS
-host = input("Enter Host Address: ")
-port = int(input("Enter Port: "))
-choice = input("Choose between [soldier] or [alien]: ")
+host = "127.0.0.1"
+port = 5000
+choice = "soldier"
 
 client = Client(host, port)
 
@@ -65,8 +76,7 @@ obstacle_list = fogGrid.getBlockedNode()
 
 
 #Server init
-player_data = client.send(["init", choice])
-
+player = client.send(["initialize", choice])
 
 def handleMovement(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
@@ -132,90 +142,90 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                deltaX = pygame.mouse.get_pos()[0] - player_data.rect.centerx
-                deltaY = pygame.mouse.get_pos()[1] - player_data.rect.centery
+                deltaX = pygame.mouse.get_pos()[0] - player.rect.centerx
+                deltaY = pygame.mouse.get_pos()[1] - player.rect.centery
                 angle = math.atan2(deltaY, deltaX)
                 velY = round(math.sin(angle), 2)
                 velX = round(math.cos(angle), 2)
-                if len(player_data.projectile) < player_data.max_projectile:
-                    player_data.projectile.append(Projectile(player_data.rect.centerx, player_data.rect.centery, player_data.id, pygame.Vector2(velX, velY), player_data.projectile_speed))
+                if len(player.projectile) < player.max_projectile:
+                    player.projectile.append(Projectile(player.rect.centerx, player.rect.centery, player.id, pygame.Vector2(velX, velY), player.projectile_speed))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_a:
-                player_data.left = 1
+                player.left = 1
             if event.key == pygame.K_d:
-                player_data.right = 1
+                player.right = 1
             if event.key == pygame.K_s:
-                player_data.down = 1
+                player.down = 1
             if event.key == pygame.K_w:
-                player_data.up = 1
+                player.up = 1
             if event.key == pygame.K_ESCAPE:
                 running = False
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
-                player_data.left = 0
+                player.left = 0
             if event.key == pygame.K_d:
-                player_data.right = 0
+                player.right = 0
             if event.key == pygame.K_s:
-                player_data.down = 0
+                player.down = 0
             if event.key == pygame.K_w:
-                player_data.up = 0
+                player.up = 0
+
+    #Resolving Server Data
+
+    # This will return all currently_active_player_id = [_id, _id, _id]
+    all_active_player = client.send(["all active player", player.id])
+
+    # This will return all_player_location = {"_id":[x, y], "_id":[x, y]}
+    all_player_location = client.send(["all location", [player.rect.x, player.rect.y]])
+
+    #
+    all_player_character = client.send(["all player character", player.id])
 
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
 
     #return [id, position, name] of other players
-    player_list = client.send(["position", player_data])
-    projectile_list = client.send(["projectile", player_data.id, player_data.projectile])
-    if player_data.current_health <= 0:
-        player_data.isDead = True
-
-    for entity in player_list:
-        if entity.id != player_data.id:
-            if not entity.isDead:
-                entity.draw_health_bar()
-                if entity.name == "soldier":
-                    screen.blit(soldier, (entity.rect.x, entity.rect.y))
-                if entity.name == "alien":
-                    screen.blit(alien, (entity.rect.x, entity.rect.y))
-                if entity.name == "default player_data":
-                    screen.blit(default_player, (entity.rect.x, entity.rect.y))
+    projectile_list = client.send(["projectile", player.id, player.projectile])
+    if player.current_health <= 0:
+        player.isDead = True
 
     for proj in projectile_list:
-        if proj[0] != player_data.id:
+        if proj[0] != player.id:
             proj_list = proj[1]
             for entry in proj_list:
-                if entry.rect.colliderect(player_data.rect):
-                    player_data.current_health -= entry.damage
+                if entry.rect.colliderect(player.rect):
+                    player.current_health -= entry.damage
                     proj_list.remove(entry)
                 else:
                     pygame.draw.rect(screen, "cyan", entry.rect)
 
-    for proj in player_data.projectile:
+    for proj in player.projectile:
         for _player in player_list:
-            if proj.rect.colliderect(_player.rect) and _player.id != player_data.id:
-                player_data.projectile.remove(proj)
-        if proj in player_data.projectile:
+            if proj.rect.colliderect(_player.rect) and _player.id != player.id:
+                player.projectile.remove(proj)
+        if proj in player.projectile:
             proj.update(dt)
             if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
-                player_data.projectile.remove(proj)
+                player.projectile.remove(proj)
             elif not fogGrid.getEntityNode(proj).traversable:
-                player_data.projectile.remove(proj)
+                player.projectile.remove(proj)
 
         pygame.draw.rect(screen, "green", proj.rect)
 
-    fogGrid.draw()
+    #fogGrid.draw()
 
-    handleMovement(player_data)
-    checkVision(player_data, fogGrid.nodes)
+    handleMovement(player)
+    checkVision(player, fogGrid.nodes)
 
-    if not player_data.isDead:
-        player_data.draw_health_bar()
-        if player_data.name == "soldier":
-            screen.blit(soldier, (player_data.rect.x, player_data.rect.y))
-        elif player_data.name == "alien":
-            screen.blit(alien, (player_data.rect.x, player_data.rect.y))
-        elif player_data.name == "default player_data":
-            screen.blit(default_player, (player_data.rect.x, player_data.rect.y))
+    for entity in all_active_player:
+        match all_player_character[entity]:
+            case "soldier":
+                _image = soldier
+            case "alien":
+                _image = alien
+            case _:
+                _image = default_player
+        screen.blit(_image, (all_player_location[entity]))
 
 
     # flip() the display to put your work on screen

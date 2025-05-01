@@ -27,6 +27,7 @@ class FogOfWar:
                 if not node.discovered:
                     pygame.draw.rect(pygame.display.get_surface(), "black", node.rect)
 
+
     def setObstacles(self, obstacle_list):
         for obstacle in obstacle_list:
             for item in self.nodes:

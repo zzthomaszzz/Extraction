@@ -5,23 +5,29 @@ import random
 from player import *
 
 player_list = []
-client_list = []
 projectile_list = []
 
-def handle_client(client, address, _id):
-    print(f"Accepted connection from {address}")
+#Refactoring code
+currently_active_player = []
+all_player_location = {}
+all_player_character = {}
 
-    client_list.append(client)
-    init = client.recv(1024)
-    init_reply = init_pack(pickle.loads(init), _id)
-    client.sendall(pickle.dumps(init_reply))
+def handle_client(client, address, _id):
+    print(f"Accepted connection from {address}, id: {_id}")
+    #
+    currently_active_player.append(_id)
+
+    # Run once data goes here
+    initialize_data = client.recv(1024)
+    initialize_reply = process_data(pickle.loads(initialize_data), _id)
+    client.sendall(pickle.dumps(initialize_reply))
 
     try:
         while True:
             data = client.recv(1024)
             if not data:
                 break
-            response = process_data(pickle.loads(data))
+            response = process_data(pickle.loads(data), _id)
             client.sendall(pickle.dumps(response))
     except Exception as e:
         print(f"Error handling client {address}: {e}")
@@ -33,39 +39,44 @@ def handle_client(client, address, _id):
         for proj in projectile_list:
             if proj[0] == _id:
                 projectile_list.remove(proj)
-        if client in client_list:
-            client_list.remove(client)
-
+        remove(_id)
         print(f"Connection with {address} closed")
 
-def init_pack(data, _id):
-    if data[0] == "init":
-        projectile_list.append([_id, []])
-        if data[1] == "soldier":
-            player_list.append(Soldier(_id))
-            return Soldier(_id)
-        elif data[1] == "alien":
-            player_list.append(Alien(_id))
-            return Alien(_id)
-        else:
-            player_list.append(Player(_id))
-            return Player(_id)
+def remove(_id):
+    currently_active_player.remove(_id)
+    if _id in all_player_character:
+        del all_player_character[_id]
+    if _id in all_player_location:
+        del all_player_location[_id]
 
-def process_data(data):
-    if data[0] == "position":
-        for player in player_list:
-            if player.id == data[1].id:
-                player.rect = data[1].rect
-                player.current_health = data[1].current_health
-                player.isDead = data[1].isDead
-        return player_list
-    elif data[0] == "projectile":
-        for proj in projectile_list:
-            if proj[0] == data[1]:
-                proj[1] = data[2]
-        return projectile_list
-    else:
-        return data
+def process_data(data, _id):
+    match data[0]:
+        case "all active player":
+            return currently_active_player
+        case "all player character":
+            return all_player_character
+        case "initialize":
+            match data[1]:
+                case "soldier":
+                    all_player_character[_id] = "soldier"
+                    player = Soldier(_id)
+                case "alien":
+                    all_player_character[_id] = "alien"
+                    player = Alien(_id)
+                case _:
+                    all_player_character[_id] = "default"
+                    player = Player(_id)
+            return player
+        case "projectile":
+            for proj in projectile_list:
+                if proj[0] == data[1]:
+                    proj[1] = data[2]
+            return projectile_list
+        case "all location":
+            all_player_location[_id] = data[1]
+            return all_player_location
+        case _:
+            return data
 
 def start_server():
     host = ""
