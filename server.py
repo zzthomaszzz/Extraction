@@ -4,13 +4,11 @@ import pickle
 import random
 from player import *
 
-player_list = []
-projectile_list = []
-
 #Refactoring code
 currently_active_player = []
 all_player_location = {}
 all_player_character = {}
+all_player_projectile = {}
 
 def handle_client(client, address, _id):
     print(f"Accepted connection from {address}, id: {_id}")
@@ -33,12 +31,6 @@ def handle_client(client, address, _id):
         print(f"Error handling client {address}: {e}")
     finally:
         client.close()
-        for player in player_list:
-            if player.id == _id:
-                player_list.remove(player)
-        for proj in projectile_list:
-            if proj[0] == _id:
-                projectile_list.remove(proj)
         remove(_id)
         print(f"Connection with {address} closed")
 
@@ -51,6 +43,9 @@ def remove(_id):
 
 def process_data(data, _id):
     match data[0]:
+        case "all player projectile":
+            all_player_projectile[_id] = data[1]
+            return all_player_projectile
         case "all active player":
             return currently_active_player
         case "all player character":
@@ -67,11 +62,6 @@ def process_data(data, _id):
                     all_player_character[_id] = "default"
                     player = Player(_id)
             return player
-        case "projectile":
-            for proj in projectile_list:
-                if proj[0] == data[1]:
-                    proj[1] = data[2]
-            return projectile_list
         case "all location":
             all_player_location[_id] = data[1]
             return all_player_location

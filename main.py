@@ -13,7 +13,6 @@ clock = pygame.time.Clock()
 running = True
 dt = 0
 
-
 #Global Data
 #Where the server data will come through
 
@@ -26,9 +25,10 @@ all_player_location = {}
 #dict={"_id": "character_name"}
 all_player_character = {}
 
+#dict={"_id":[ Projectile(), Projectile()]}
+all_player_projectile = {}
 
 #Older version
-player_list = []
 projectile_list = []
 
 #client data
@@ -37,15 +37,15 @@ soldier = pygame.image.load("asset/soldier.png")
 alien = pygame.image.load("asset/alien.png")
 default_player = pygame.image.load("asset/default_player.png")
 
-
 #INPUTS
-host = input("Enter Host Address: ")
+host = "127.0.0.1"
 port = 5000
-choice = input("[soldier] - [alien]: ")
+choice = "soldier"
 
 client = Client(host, port)
 
 fogGrid = FogOfWar(1280, 800)
+
 obstacle = [
     pygame.rect.Rect(288, 64, 95, 95),
     pygame.rect.Rect(384, 96, 31, 31),
@@ -72,28 +72,37 @@ obstacle = [
 ]
 
 fogGrid.setObstacles(obstacle)
-obstacle_list = fogGrid.getBlockedNode()
-
 
 #Server init
 player = client.send(["initialize", choice])
 
-def handleMovement(_player):
+
+def handle_player(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
     if _player.rect.x < 0:
         _player.rect.x = 0
     if _player.rect.x + 32 > 1280:
-        _player.rect.x = 1280-32
-    checkForCollisionHorizontal(_player, fogGrid.getBlockedNode())
+        _player.rect.x = 1280 - 32
+    adjust_horizontal(_player, obstacle)
 
     _player.rect.y += (_player.down - _player.up) * _player.speed * dt
     if _player.rect.y < 0:
         _player.rect.y = 0
     if _player.rect.y + 32 > 800:
-        _player.rect.y = 800-32
-    checkForCollisionVertical(_player, fogGrid.getBlockedNode())
+        _player.rect.y = 800 - 32
+    adjust_vertical(_player, obstacle)
 
-def checkForCollisionHorizontal(_player, _obstacle_list):
+
+def handle_projectile(_projectiles):
+    for _projectile in _projectiles:
+        _projectile.update(dt)
+        if _projectile.rect.x < 0 or _projectile.rect.x + _projectile.size > 1280 or _projectile.rect.y < 0 or _projectile.rect.y + _projectile.size > 800:
+            _projectiles.remove(_projectile)
+        elif _projectile.rect.collidelist(obstacle) >= 0:
+            _projectiles.remove(_projectile)
+
+
+def adjust_horizontal(_player, _obstacle_list):
     for rect in _obstacle_list:
         if _player.rect.colliderect(rect):
             if rect.left < _player.rect.right < rect.right:
@@ -101,7 +110,8 @@ def checkForCollisionHorizontal(_player, _obstacle_list):
             elif rect.left < _player.rect.left < rect.right:
                 _player.rect.left = rect.right
 
-def checkForCollisionVertical(_player, _obstacle_list):
+
+def adjust_vertical(_player, _obstacle_list):
     for rect in _obstacle_list:
         if _player.rect.colliderect(rect):
             if rect.top < _player.rect.top < rect.bottom:
@@ -109,7 +119,8 @@ def checkForCollisionVertical(_player, _obstacle_list):
             elif rect.top < _player.rect.bottom < rect.bottom:
                 _player.rect.bottom = rect.top
 
-def checkVision(_player, nodes):
+
+def update_fog(_player, nodes):
     for item in nodes:
         for node in item:
             if not node.discovered:
@@ -117,7 +128,8 @@ def checkVision(_player, nodes):
                 if dist <= _player.vision:
                     node.discovered = 1
                     for obs in obstacle:
-                        if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx, node.rect.centery):
+                        if obs.clipline(_player.rect.centerx, _player.rect.centery, node.rect.centerx,
+                                        node.rect.centery):
                             if node.traversable:
                                 node.discovered = 0
                                 break
@@ -142,13 +154,7 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                deltaX = pygame.mouse.get_pos()[0] - player.rect.centerx
-                deltaY = pygame.mouse.get_pos()[1] - player.rect.centery
-                angle = math.atan2(deltaY, deltaX)
-                velY = round(math.sin(angle), 2)
-                velX = round(math.cos(angle), 2)
-                if len(player.projectile) < player.max_projectile:
-                    player.projectile.append(Projectile(player.rect.centerx, player.rect.centery, player.id, pygame.Vector2(velX, velY), player.projectile_speed))
+                player.basic_attack(pygame.mouse.get_pos())
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_a:
                 player.left = 1
@@ -181,36 +187,13 @@ while running:
     # This will return {"_id": "character name"}
     all_player_character = client.send(["all player character", player.id])
 
+    #This will return {"_id": [Projectile(), Projectile()]
+    all_player_projectile = client.send(["all player projectile", player.get_projectile_data()])
+
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
 
     #return [id, position, name] of other players
-    projectile_list = client.send(["projectile", player.id, player.projectile])
-    if player.current_health <= 0:
-        player.isDead = True
-
-    for proj in projectile_list:
-        if proj[0] != player.id:
-            proj_list = proj[1]
-            for entry in proj_list:
-                if entry.rect.colliderect(player.rect):
-                    player.current_health -= entry.damage
-                    proj_list.remove(entry)
-                else:
-                    pygame.draw.rect(screen, "cyan", entry.rect)
-
-    for proj in player.projectile:
-        for _player in player_list:
-            if proj.rect.colliderect(_player.rect) and _player.id != player.id:
-                player.projectile.remove(proj)
-        if proj in player.projectile:
-            proj.update(dt)
-            if proj.rect.x < 0 or proj.rect.x + proj.size > 1270 or proj.rect.y < 0 or proj.rect.y + proj.size > 790:
-                player.projectile.remove(proj)
-            elif not fogGrid.getEntityNode(proj).traversable:
-                player.projectile.remove(proj)
-
-        pygame.draw.rect(screen, "green", proj.rect)
 
     #Drawing all player
     #Note that the main player character will not be covered by fog
@@ -224,12 +207,18 @@ while running:
                 _image = default_player
         screen.blit(_image, (all_player_location[entity]))
 
+    #Drawing all projectile
+    for entity in all_active_player:
+        for projectile in all_player_projectile[entity]:
+            pygame.draw.rect(screen, "red", projectile, 1)
+
     fogGrid.draw()
 
-    handleMovement(player)
+    handle_player(player)
 
-    checkVision(player, fogGrid.nodes)
+    handle_projectile(player.projectile)
 
+    update_fog(player, fogGrid.nodes)
 
     # flip() the display to put your work on screen
     pygame.display.flip()
