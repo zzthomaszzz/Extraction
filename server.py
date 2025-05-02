@@ -17,13 +17,13 @@ def handle_client(client, address, _id):
     currently_active_player.append(_id)
 
     # Run once data goes here
-    initialize_data = client.recv(1024)
+    initialize_data = client.recv(2048)
     initialize_reply = process_data(pickle.loads(initialize_data), _id)
     client.sendall(pickle.dumps(initialize_reply))
 
     try:
         while True:
-            data = client.recv(1024)
+            data = client.recv(2048)
             if not data:
                 break
             response = process_data(pickle.loads(data), _id)
@@ -31,8 +31,8 @@ def handle_client(client, address, _id):
     except Exception as e:
         print(f"Error handling client {address}: {e}")
     finally:
-        client.close()
         remove(_id)
+        client.close()
         print(f"Connection with {address} closed")
 
 def remove(_id):
@@ -44,7 +44,7 @@ def remove(_id):
     if _id in all_player_health:
         del all_player_health[_id]
     if _id in all_player_projectile:
-        del all_player_projectile
+        del all_player_projectile[_id]
 
 def process_data(data, _id):
     match data[0]:
@@ -74,6 +74,7 @@ def process_data(data, _id):
                     player = Player(_id)
             return player
         case "all location":
+            print(all_player_location)
             all_player_location[_id] = data[1]
             return all_player_location
         case _:
@@ -87,13 +88,16 @@ def start_server():
     server_socket.bind((host, port))
     server_socket.listen(1)
 
+    player_id = 0
+
     print(f"Server listening on {host}:{port}")
     while True:
         client_socket, addr = server_socket.accept()
-        client_id = random.random()
+        client_id = player_id
         client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
         client_thread.daemon = True
         client_thread.start()
+        player_id += 1
 
 if __name__ == "__main__":
     start_server()

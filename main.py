@@ -168,11 +168,11 @@ while running:
     # This will return {"_id": "character name"}
     all_player_character = client.send(["all player character", player.id])
 
-    #This will return {"_id": [Projectile(), Projectile()]}
+    #This will return {"_id": [projectile.rect, projectile.rect]}
     all_player_projectile = client.send(["all player projectile", player.get_projectile_data()])
 
     #This will return {"_id": [current_health, max_health]}
-    all_player_health = client.send(["all player projectile", [player.current_health, player.max_health]])
+    all_player_health = client.send(["all player health", [player.current_health, player.max_health]])
 
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
@@ -182,29 +182,34 @@ while running:
     #Drawing all player
     #Note that the main player character will not be covered by fog
     for entity in all_active_player:
-        match all_player_character[entity]:
-            case "mage":
-                _image = mage
-            case "soldier":
-                _image = soldier
-            case "alien":
-                _image = alien
-            case _:
-                _image = default_player
-        screen.blit(_image, (all_player_location[entity]))
+        if entity in all_player_character:
+            match all_player_character[entity]:
+                case "mage":
+                    _image = mage
+                case "soldier":
+                    _image = soldier
+                case "alien":
+                    _image = alien
+                case _:
+                    _image = default_player
+            screen.blit(_image, all_player_location[entity])
 
     #Drawing all health bar
     for entity in all_active_player:
-        max_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, 32, 5)
-        current_hp_bar = (all_player_health[entity][0] / all_player_health[entity][1]) * 32
-        current_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, current_hp_bar, 5)
-        pygame.draw.rect(pygame.display.get_surface(), "black", max_hp_rect)
-        pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
+        if entity in all_player_location:
+            max_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, 32, 5)
+            current_hp_bar = (all_player_health[entity][0] / all_player_health[entity][1]) * 32
+            current_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, current_hp_bar, 5)
+            pygame.draw.rect(pygame.display.get_surface(), "black", max_hp_rect)
+            pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
 
     #Drawing all projectile
     for entity in all_active_player:
-        for projectile in all_player_projectile[entity]:
-            pygame.draw.rect(screen, "red", projectile, 1)
+        if entity in all_player_projectile:
+            for _proj in all_player_projectile[entity]:
+                if _proj.colliderect(player.rect) and not entity == player.id:
+                    player.take_damage(25)
+                pygame.draw.rect(screen, "red", _proj, 1)
 
     #Drawing fog of war
     map_system.draw()

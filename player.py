@@ -7,7 +7,6 @@ import projectile
 
 
 class Player:
-    max_health = 100
 
     def __init__(self, _id):
         self.rect = pygame.rect.Rect(0, 0, 32, 32)
@@ -35,9 +34,13 @@ class Player:
         self.isDead = False
 
     def update(self, dt):
+        self.handle_i_frame(dt)
+
+    def handle_i_frame(self, dt):
         if self.isInvincible:
             self.i_frame_count += dt
             if self.i_frame_count >= self.i_frame_duration:
+                self.i_frame_count = 0
                 self.isInvincible = False
 
     def basic_attack(self, point):
@@ -126,6 +129,7 @@ class Mage(Player):
 
     def update(self, dt):
         super().update(dt)
+
         self.angle += self.rotation_speed * dt
         if self.angle > 360:
             self.angle = 0
