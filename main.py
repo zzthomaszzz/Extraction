@@ -192,7 +192,8 @@ while running:
                     _image = alien
                 case _:
                     _image = default_player
-            screen.blit(_image, all_player_location[entity])
+            if entity in all_player_location:
+                screen.blit(_image, all_player_location[entity])
 
     #Drawing all health bar
     for entity in all_active_player:
