@@ -42,35 +42,21 @@ mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 
 #INPUTS
-host = input("Enter host address: ")
+host = "127.0.0.1"
 port = 5000
-character_choice = input("[soldier] - [alien] - [mage]")
+character_choice = "soldier"
 
 client = Client(host, port)
 
 obstacles = [
-    pygame.rect.Rect(288, 64, 95, 95),
-    pygame.rect.Rect(384, 96, 31, 31),
-    pygame.rect.Rect(384, 320, 31, 63),
-    pygame.rect.Rect(416, 320, 31, 31),
-    pygame.rect.Rect(64, 512, 95, 127),
-    pygame.rect.Rect(160, 544, 127, 159),
-    pygame.rect.Rect(352, 448, 31, 63),
-    pygame.rect.Rect(384, 480, 31, 31),
-    pygame.rect.Rect(512, 448, 95, 31),
-    pygame.rect.Rect(576, 416, 31, 31),
-    pygame.rect.Rect(576, 320, 63, 31),
-    pygame.rect.Rect(544, 544, 31, 95),
-    pygame.rect.Rect(576, 576, 95, 95),
-    pygame.rect.Rect(672, 576, 95, 31),
-    pygame.rect.Rect(768, 512, 127, 95),
-    pygame.rect.Rect(896, 576, 95, 63),
-    pygame.rect.Rect(832, 256, 159, 63),
-    pygame.rect.Rect(960, 224, 31, 31),
-    pygame.rect.Rect(864, 320, 127, 31),
-    pygame.rect.Rect(896, 352, 95, 31),
-    pygame.rect.Rect(1024, 128, 159, 191),
-    pygame.rect.Rect(1088, 96, 95, 31),
+    pygame.rect.Rect(64, 512, 63, 63),
+    pygame.rect.Rect(160, 544, 63, 63),
+    pygame.rect.Rect(224, 288, 63, 63),
+    pygame.rect.Rect(352, 192, 63, 63),
+    pygame.rect.Rect(512, 160, 96, 63),
+    pygame.rect.Rect(352, 448, 63, 63),
+    pygame.rect.Rect(32, 256, 127, 31),
+    pygame.rect.Rect(32, 288, 31, 63),
 ]
 
 map_system = MapSystem(1280, 800, obstacles)
@@ -197,7 +183,7 @@ while running:
 
     #Drawing all health bar
     for entity in all_active_player:
-        if entity in all_player_location:
+        if entity in all_player_location and entity in all_player_health:
             max_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, 32, 5)
             current_hp_bar = (all_player_health[entity][0] / all_player_health[entity][1]) * 32
             current_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, current_hp_bar, 5)

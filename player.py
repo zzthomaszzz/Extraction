@@ -77,7 +77,7 @@ class Soldier(Player):
         super().__init__(_id)
         self.name = "soldier"
         self.speed = 150
-        self.vision = 600
+        self.vision = 100
         self.max_health = 500
         self.current_health = 500
         self.projectile_speed = 500
