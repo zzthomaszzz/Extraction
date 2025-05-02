@@ -17,6 +17,8 @@ class MapSystem:
         self.discovered_nodes = []
         self.initNode()
         self.setObstacles()
+        self.previous_player_pos = []
+        self.fog_update_distance = 32
 
     def initNode(self):
         y = 0
@@ -34,13 +36,15 @@ class MapSystem:
                 if not node.discovered:
                     pygame.draw.rect(pygame.display.get_surface(), "black", node.rect)
 
-
     def setObstacles(self):
         for item in self.nodes:
             for node in item:
                 if node.rect.collidelist(self.obstacles) >= 0:
                     node.traversable = 0
                     self.non_traversable_nodes.append(node)
+
+    def set_player_pos(self, player_pos):
+        self.previous_player_pos = player_pos
 
     def get_adjacent(self, node):
         adj_node = []
@@ -67,11 +71,13 @@ class MapSystem:
             pass
         return adj_node
 
-    def handle_fog(self, origin_node, vision):
-        for _node in self.discovered_nodes:
-            _node.discovered = 0
+    def handle_fog(self, origin_node, vision, player_pos):
+        dist = math.hypot(player_pos[0] - self.previous_player_pos[0], player_pos[1] - self.previous_player_pos[1])
+        if dist >= self.fog_update_distance:
+            self.previous_player_pos = player_pos
+            for _node in self.discovered_nodes:
+                _node.discovered = 0
         self._handle_fog(origin_node, vision, origin_node)
-
 
     def _handle_fog(self, node, vision, originNode):
         dist = math.hypot(node.rect.centerx - originNode.rect.centerx, node.rect.centery - originNode.rect.centery)
@@ -89,10 +95,6 @@ class MapSystem:
                     for _node in adj:
                         if not _node.discovered:
                             self._handle_fog(_node, vision, originNode)
-
-
-
-
 
 
     def getEntityNode(self, _entity):

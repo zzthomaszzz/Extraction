@@ -56,8 +56,8 @@ class Soldier(Player):
     def __init__(self, _id):
         super().__init__(_id)
         self.name = "soldier"
-        self.speed = 400
-        self.vision = 400
+        self.speed = 150
+        self.vision = 350
         self.max_health = 500
         self.current_health = 500
         self.projectile_speed = 500
@@ -68,9 +68,9 @@ class Alien(Player):
     def __init__(self, _id):
         super().__init__(_id)
         self.name = "alien"
-        self.speed = 300
-        self.max_health = 800
-        self.current_health = 800
+        self.speed = 125
+        self.max_health = 500
+        self.current_health = 500
         self.max_projectile = 4
         self.projectile_speed = 400
         self.vision = 200

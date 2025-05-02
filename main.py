@@ -73,6 +73,7 @@ map_system = MapSystem(1280, 800, obstacles)
 
 #Server init
 player = client.send(["initialize", character_choice])
+map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
 
 def handle_player(_player):
@@ -194,7 +195,7 @@ while running:
 
     handle_projectile(player.projectile)
 
-    map_system.handle_fog(map_system.getEntityNode(player), player.vision)
+    map_system.handle_fog(map_system.getEntityNode(player), player.vision, [player.rect.centerx, player.rect.centery])
 
     # flip() the display to put your work on screen
     pygame.display.flip()
