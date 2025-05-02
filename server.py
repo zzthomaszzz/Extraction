@@ -9,6 +9,7 @@ currently_active_player = []
 all_player_location = {}
 all_player_character = {}
 all_player_projectile = {}
+all_player_health = {}
 
 def handle_client(client, address, _id):
     print(f"Accepted connection from {address}, id: {_id}")
@@ -40,9 +41,16 @@ def remove(_id):
         del all_player_character[_id]
     if _id in all_player_location:
         del all_player_location[_id]
+    if _id in all_player_health:
+        del all_player_health[_id]
+    if _id in all_player_projectile:
+        del all_player_projectile
 
 def process_data(data, _id):
     match data[0]:
+        case "all player health":
+            all_player_health[_id] = data[1]
+            return all_player_health
         case "all player projectile":
             all_player_projectile[_id] = data[1]
             return all_player_projectile
@@ -52,6 +60,9 @@ def process_data(data, _id):
             return all_player_character
         case "initialize":
             match data[1]:
+                case "mage":
+                    all_player_character[_id] = "mage"
+                    player = Mage(_id)
                 case "soldier":
                     all_player_character[_id] = "soldier"
                     player = Soldier(_id)
