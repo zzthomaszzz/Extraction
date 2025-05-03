@@ -77,7 +77,9 @@ class MapSystem:
             _node.discovered = 0
         self._handle_fog(origin_node, vision, origin_node)
         for member in teammate:
-            self._handle_fog(self.getNodeFromPos(teammate[member][0][0], teammate[member][0][1]), member[1], self.getNodeFromPos(teammate[member][0][0], teammate[member][0][1]))
+            _node = self.getNodeFromPos(teammate[member][0][0], teammate[member][0][1])
+            _node.discovered = 0
+            self._handle_fog(_node, teammate[member][1], _node)
 
     def _handle_fog(self, node, vision, originNode):
         dist = math.hypot(node.rect.centerx - originNode.rect.centerx, node.rect.centery - originNode.rect.centery)

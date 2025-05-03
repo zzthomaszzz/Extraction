@@ -217,6 +217,9 @@ while in_menu:
 player = client.send(["initialize", character_choice, team])
 map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
+refresh_rate = 0.25
+refresh_counter = 0
+
 while running:
 
     if player.isDead:
@@ -305,7 +308,7 @@ while running:
     for entity in all_active_player:
         if entity in all_player_projectile and entity in all_player_location:
             for _proj in all_player_projectile[entity][0]:
-                if _proj.colliderect(player.rect) and not entity == player.id and not all_player_location[1] == team:
+                if _proj.colliderect(player.rect) and not entity == player.id and not all_player_location[entity][1] == team:
                     total_damage += all_player_projectile[entity][1]
                 pygame.draw.rect(screen, "red", _proj, 1)
     player.take_damage(total_damage)
@@ -320,7 +323,10 @@ while running:
 
     player.handle_projectile(obstacles, dt)
 
-    map_system.handle_fog(map_system.getEntityNode(player), player.vision, teammate_data)
+    refresh_counter += dt
+    if refresh_counter > refresh_rate:
+        map_system.handle_fog(map_system.getEntityNode(player), player.vision, teammate_data)
+        refresh_counter = 0
 
     #Test Draw
     for _node in heal_zone:
