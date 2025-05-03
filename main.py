@@ -45,6 +45,7 @@ default_player = pygame.image.load("asset/default_player.png")
 host = "127.0.0.1"
 port = 5000
 character_choice = "soldier"
+team = 4
 
 client = Client(host, port)
 
@@ -53,16 +54,56 @@ obstacles = [
     pygame.rect.Rect(160, 544, 63, 63),
     pygame.rect.Rect(224, 288, 63, 63),
     pygame.rect.Rect(352, 192, 63, 63),
-    pygame.rect.Rect(512, 160, 96, 63),
+    pygame.rect.Rect(512, 160, 95, 63),
     pygame.rect.Rect(352, 448, 63, 63),
     pygame.rect.Rect(32, 256, 127, 31),
     pygame.rect.Rect(32, 288, 31, 63),
+    pygame.rect.Rect(0, 416, 159, 31),
+    pygame.rect.Rect(256, 448, 31, 127),
+    pygame.rect.Rect(288, 96, 63, 63),
+    pygame.rect.Rect(480, 0, 31, 127),
+    pygame.rect.Rect(384, 320, 31, 63),
+    pygame.rect.Rect(288, 640, 127, 31),
+    pygame.rect.Rect(384, 544, 63, 31),
+    pygame.rect.Rect(288, 672, 31, 95),
+    pygame.rect.Rect(384, 736, 95, 63),
+    pygame.rect.Rect(480, 256, 63, 63),
+    pygame.rect.Rect(512, 384, 31, 31),
+    pygame.rect.Rect(576, 320, 63, 31),
+    pygame.rect.Rect(544, 448, 63, 31),
+    pygame.rect.Rect(512, 480, 63, 63),
+    pygame.rect.Rect(480, 672, 255, 31),
+    pygame.rect.Rect(512, 704, 31, 63),
+    pygame.rect.Rect(672, 736, 31, 63),
+    pygame.rect.Rect(544, 576, 127, 63),
+    pygame.rect.Rect(672, 480, 31, 31),
+    pygame.rect.Rect(768, 512, 127, 95),
+    pygame.rect.Rect(928, 576, 63, 63),
+    pygame.rect.Rect(800, 672, 95, 31),
+    pygame.rect.Rect(864, 608, 31, 63),
+    pygame.rect.Rect(960, 480, 223, 31),
+    pygame.rect.Rect(1152, 448, 31, 31),
+    pygame.rect.Rect(832, 416, 31, 63),
+    pygame.rect.Rect(928, 416, 31, 31),
+    pygame.rect.Rect(1024, 416, 63, 31),
+    pygame.rect.Rect(896, 320, 95, 63),
+    pygame.rect.Rect(1024, 352, 31, 63),
+    pygame.rect.Rect(736, 352, 31, 63),
+    pygame.rect.Rect(832, 288, 31, 31),
+    pygame.rect.Rect(704, 192, 31, 31),
+    pygame.rect.Rect(832, 160, 127, 63),
+    pygame.rect.Rect(1024, 224, 63, 63),
+    pygame.rect.Rect(672, 288, 63, 31),
+    pygame.rect.Rect(608, 64, 95, 63),
+    pygame.rect.Rect(768, 64, 95, 63),
+    pygame.rect.Rect(1024, 96, 63, 63),
+    pygame.rect.Rect(1152, 320, 127, 31),
 ]
 
 map_system = MapSystem(1280, 800, obstacles)
 
 #Server init
-player = client.send(["initialize", character_choice])
+player = client.send(["initialize", character_choice, team])
 map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
 
@@ -154,8 +195,8 @@ while running:
     # This will return {"_id": "character name"}
     all_player_character = client.send(["all player character", player.id])
 
-    #This will return {"_id": [projectile.rect, projectile.rect]}
-    all_player_projectile = client.send(["all player projectile", player.get_projectile_data()])
+    #This will return {"_id": [[projectile.rect, projectile.rect], player.damage]}
+    all_player_projectile = client.send(["all player projectile", player.get_projectile_data(), player.damage])
 
     #This will return {"_id": [current_health, max_health]}
     all_player_health = client.send(["all player health", [player.current_health, player.max_health]])
@@ -168,7 +209,7 @@ while running:
     #Drawing all player
     #Note that the main player character will not be covered by fog
     for entity in all_active_player:
-        if entity in all_player_character:
+        if entity in all_player_character and entity in all_player_location:
             match all_player_character[entity]:
                 case "mage":
                     _image = mage
@@ -178,8 +219,7 @@ while running:
                     _image = alien
                 case _:
                     _image = default_player
-            if entity in all_player_location:
-                screen.blit(_image, all_player_location[entity])
+            screen.blit(_image, all_player_location[entity])
 
     #Drawing all health bar
     for entity in all_active_player:
@@ -191,12 +231,14 @@ while running:
             pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
 
     #Drawing all projectile
+    total_damage = 0
     for entity in all_active_player:
         if entity in all_player_projectile:
-            for _proj in all_player_projectile[entity]:
+            for _proj in all_player_projectile[entity][0]:
                 if _proj.colliderect(player.rect) and not entity == player.id:
-                    player.take_damage(25)
+                    total_damage += all_player_projectile[entity][1]
                 pygame.draw.rect(screen, "red", _proj, 1)
+    player.take_damage(total_damage)
 
     #Drawing fog of war
     map_system.draw()

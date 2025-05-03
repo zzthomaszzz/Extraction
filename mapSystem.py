@@ -4,6 +4,7 @@ import math
 
 class MapSystem:
     def __init__(self, sizeX, sizeY, obstacles):
+        #Grid map is 40 * 25
         self.size = 32
         self.sizeX = sizeX
         self.sizeY = sizeY
@@ -18,7 +19,7 @@ class MapSystem:
         self.initNode()
         self.setObstacles()
         self.previous_player_pos = []
-        self.fog_update_distance = 32
+        self.fog_update_distance = 16
 
     def initNode(self):
         y = 0

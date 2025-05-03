@@ -8,14 +8,10 @@ import projectile
 
 class Player:
 
-    def __init__(self, _id):
-        self.rect = pygame.rect.Rect(0, 0, 32, 32)
+    def __init__(self, _id, location):
+        self.rect = pygame.rect.Rect(location[0], location[1], 32, 32)
         self.name = "default"
-        self.speed = 100
         self.left, self.right, self.up, self.down = 0, 0, 0, 0
-        self.vision = 100
-        self.max_health = 100
-        self.current_health = 100
         self.image_path = "asset/default_player.png"
         self.id = _id
 
@@ -25,13 +21,21 @@ class Player:
         self.projectile_size = 5
         self.projectile_speed = 300
 
-        #Damage data
+        #I_frame data
         self.isInvincible = False
         self.i_frame_duration = 0.25
         self.i_frame_count = 0
 
+        #Basic Stat Data
+        self.vision = 100
+        self.max_health = 100
+        self.current_health = 100
+        self.speed = 100
+        self.damage = 10
+
         #Status data
         self.isDead = False
+        self.hasFlag = False
 
     def update(self, dt):
         self.handle_i_frame(dt)
@@ -67,34 +71,58 @@ class Player:
         return data
 
     def take_damage(self, damage):
-        if not self.isInvincible:
-            self.current_health -= damage
-            self.isInvincible = True
+        if damage > 0:
+            if not self.isInvincible:
+                self.current_health -= damage
+                self.isInvincible = True
 
 class Soldier(Player):
 
-    def __init__(self, _id):
-        super().__init__(_id)
+    def __init__(self, _id, location):
+        super().__init__(_id, location)
         self.name = "soldier"
-        self.speed = 150
-        self.vision = 100
+
+        self.image_path = "asset/soldier.png"
+
+        #Basic stats
+        self.speed = 100
+        self.vision = 400
         self.max_health = 500
         self.current_health = 500
         self.projectile_speed = 500
-        self.image_path = "asset/soldier.png"
+        self.damage = 25
 
 class Alien(Player):
 
-    def __init__(self, _id):
-        super().__init__(_id)
+    def __init__(self, _id, location):
+        super().__init__(_id, location)
         self.name = "alien"
-        self.speed = 125
+
+        self.image_path = "asset/alien.png"
+
+        # Basic stats
+        self.speed = 100
+        self.vision = 400
         self.max_health = 500
         self.current_health = 500
+        self.projectile_speed = 500
         self.max_projectile = 4
-        self.projectile_speed = 400
-        self.vision = 200
-        self.image_path = "asset/alien.png"
+        self.vision = 300
+        self.damage = 25
+
+
+    #Passive data
+        self.regen = 5
+        self.counter = 0
+
+    def update(self, dt):
+        if self.current_health < self.max_health:
+            self.counter += dt
+            if self.counter >= 1:
+                self.counter = 0
+                self.current_health += self.regen
+                if self.current_health > self.max_health:
+                    self.current_health = self.max_health
 
 
 def rotate_point(point, center_point, angle):
@@ -110,22 +138,26 @@ def rotate_point(point, center_point, angle):
 
 
 class Mage(Player):
-    def __init__(self, _id):
-        super().__init__(_id)
+    def __init__(self, _id, location):
+        super().__init__(_id, location)
         self.name = "mage"
-        self.speed = 80
-        self.max_health = 300
-        self.current_health = 300
-        self.max_projectile = 5
-        self.projectile_speed = 500
         self.vision = 350
         self.image_path = "asset/mage.png"
-
         self.cooldown = 1
         self.counter = 0
         self.angle = 0
         self.rotation_speed = 180
         self.orbit_range = 15
+
+        # Basic stats
+        self.speed = 100
+        self.vision = 400
+        self.max_health = 500
+        self.current_health = 500
+        self.projectile_speed = 400
+        self.max_projectile = 5
+        self.vision = 300
+        self.damage = 25
 
     def update(self, dt):
         super().update(dt)

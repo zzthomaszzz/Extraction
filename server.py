@@ -4,12 +4,14 @@ import pickle
 import random
 from player import *
 
-#Refactoring code
+#Client data
 currently_active_player = []
 all_player_location = {}
 all_player_character = {}
 all_player_projectile = {}
 all_player_health = {}
+
+#Team Data
 
 def handle_client(client, address, _id):
     print(f"Accepted connection from {address}, id: {_id}")
@@ -52,26 +54,37 @@ def process_data(data, _id):
             all_player_health[_id] = data[1]
             return all_player_health
         case "all player projectile":
-            all_player_projectile[_id] = data[1]
+            all_player_projectile[_id] = [data[1], data[2]]
             return all_player_projectile
         case "all active player":
             return currently_active_player
         case "all player character":
             return all_player_character
         case "initialize":
+            match data[2]:
+                case 1:
+                    location = [0,0]
+                case 2:
+                    location = [1247, 0]
+                case 3:
+                    location = [1247, 767]
+                case 4:
+                    location = [0, 767]
+                case _:
+                    location = [0, 0]
             match data[1]:
                 case "mage":
                     all_player_character[_id] = "mage"
-                    player = Mage(_id)
+                    player = Mage(_id, location)
                 case "soldier":
                     all_player_character[_id] = "soldier"
-                    player = Soldier(_id)
+                    player = Soldier(_id, location)
                 case "alien":
                     all_player_character[_id] = "alien"
-                    player = Alien(_id)
+                    player = Alien(_id, location)
                 case _:
                     all_player_character[_id] = "default"
-                    player = Player(_id)
+                    player = Player(_id, location)
             return player
         case "all location":
             print(all_player_location)
@@ -88,16 +101,13 @@ def start_server():
     server_socket.bind((host, port))
     server_socket.listen(1)
 
-    player_id = 0
-
     print(f"Server listening on {host}:{port}")
     while True:
         client_socket, addr = server_socket.accept()
-        client_id = player_id
+        client_id = random.random()
         client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
         client_thread.daemon = True
         client_thread.start()
-        player_id += 1
 
 if __name__ == "__main__":
     start_server()
