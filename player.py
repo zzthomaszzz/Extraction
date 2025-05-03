@@ -15,6 +15,9 @@ class Player:
         self.image_path = "asset/default_player.png"
         self.id = _id
 
+        #Sprite
+        self.flip = False
+
         #Projectile data
         self.projectile = []
         self.max_projectile = 3
@@ -86,6 +89,12 @@ class Player:
                 self.current_health -= damage
                 self.isInvincible = True
 
+    def heal(self, amount):
+        if self.current_health < self.max_health:
+            self.current_health += amount
+            if self.current_health > self.max_health:
+                self.current_health = self.max_health
+
 class Soldier(Player):
 
     def __init__(self, _id, location):
@@ -94,11 +103,11 @@ class Soldier(Player):
         self.image_path = "asset/soldier.png"
 
         #Basic stats
-        self.speed = 80
+        self.speed = 125
         self.vision = 300
         self.max_health = 550
-        self.current_health = 550
-        self.projectile_speed = 350
+        self.current_health = 200
+        self.projectile_speed = 600
         self.damage = 40
 
 class Alien(Player):
@@ -110,8 +119,8 @@ class Alien(Player):
         self.image_path = "asset/alien.png"
 
         # Basic stats
-        self.default_speed = 120
-        self.speed = 120
+        self.default_speed = 150
+        self.speed = 150
         self.vision = 250
         self.max_health = 800
         self.current_health = 800
@@ -131,17 +140,16 @@ class Alien(Player):
 
     def update(self, dt):
         super().update(dt)
+        self.regenerate(dt)
         if len(self.projectile) > 0:
             self.speed = 0
-        else:
-            self.speed = self.default_speed
-        self.regenerate(dt)
+
 
     def regenerate(self, dt):
         if not self.isDead:
             if self.current_health < 200:
                 self.regen = 10
-                self.speed = self.default_speed / 2
+                self.speed = self.default_speed / 3
             else:
                 self.regen = 5
                 self.speed = self.default_speed
@@ -181,7 +189,7 @@ class Mage(Player):
         self.image_path = "asset/mage.png"
 
         # Basic stats
-        self.speed = 100
+        self.speed = 130
         self.vision = 350
         self.max_health = 500
         self.current_health = 500

@@ -42,10 +42,10 @@ mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 
 #INPUTS
-host = input("Enter Host Address: ")
+host = "127.0.0.1"
 port = 5000
-character_choice = input("Enter your character [soldier] - [alien] - [mage]: ")
-team = int(input("starting position [1 - 4]:"))
+character_choice = "soldier"
+team = 1
 
 client = Client(host, port)
 
@@ -98,6 +98,13 @@ obstacles = [
     pygame.rect.Rect(768, 64, 95, 63),
     pygame.rect.Rect(1024, 96, 63, 63),
     pygame.rect.Rect(1152, 320, 127, 31),
+]
+
+heal_zone = [
+    pygame.rect.Rect(64, 288, 31, 31),
+    pygame.rect.Rect(608, 736, 31, 31),
+    pygame.rect.Rect(1056, 384, 31, 31),
+    pygame.rect.Rect(576, 32, 31, 31),
 ]
 
 map_system = MapSystem(1280, 800, obstacles)
@@ -244,6 +251,11 @@ while running:
     player.handle_projectile(obstacles, dt)
 
     map_system.handle_fog(map_system.getEntityNode(player), player.vision, [player.rect.centerx, player.rect.centery])
+
+    #Test Draw
+    for _node in heal_zone:
+        if player.rect.colliderect(_node):
+            player.heal(50 * dt)
 
 
     # flip() the display to put your work on screen
