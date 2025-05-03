@@ -72,13 +72,12 @@ class MapSystem:
             pass
         return adj_node
 
-    def handle_fog(self, origin_node, vision, player_pos):
-        dist = math.hypot(player_pos[0] - self.previous_player_pos[0], player_pos[1] - self.previous_player_pos[1])
-        if dist >= self.fog_update_distance:
-            self.previous_player_pos = player_pos
-            for _node in self.discovered_nodes:
-                _node.discovered = 0
+    def handle_fog(self, origin_node, vision, teammate):
+        for _node in self.discovered_nodes:
+            _node.discovered = 0
         self._handle_fog(origin_node, vision, origin_node)
+        for member in teammate:
+            self._handle_fog(self.getNodeFromPos(teammate[member][0][0], teammate[member][0][1]), member[1], self.getNodeFromPos(teammate[member][0][0], teammate[member][0][1]))
 
     def _handle_fog(self, node, vision, originNode):
         dist = math.hypot(node.rect.centerx - originNode.rect.centerx, node.rect.centery - originNode.rect.centery)
@@ -101,6 +100,13 @@ class MapSystem:
     def getEntityNode(self, _entity):
         x = _entity.rect.x / self.sizeX
         y = _entity.rect.y / self.sizeY
+        x *= self.nodeX
+        y *= self.nodeY
+        return self.nodes[round(y)][round(x)]
+
+    def getNodeFromPos(self, pos_x, pos_y):
+        x = pos_x / self.sizeX
+        y = pos_y / self.sizeY
         x *= self.nodeX
         y *= self.nodeY
         return self.nodes[round(y)][round(x)]

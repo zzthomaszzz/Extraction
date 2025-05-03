@@ -11,6 +11,7 @@ pygame.init()
 screen = pygame.display.set_mode((1280, 800))
 clock = pygame.time.Clock()
 running = True
+in_menu = True
 dt = 0
 
 #Global Data
@@ -42,10 +43,10 @@ mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 
 #INPUTS
-host = input("Enter host address: ")
+host = "127.0.0.1"
 port = 5000
-character_choice = input("[soldier], [mage], [alien]: ")
-team = int(input("Starting position 1-4"))
+character_choice = ""
+team = 0
 
 client = Client(host, port)
 
@@ -107,11 +108,25 @@ heal_zone = [
     pygame.rect.Rect(576, 32, 31, 31),
 ]
 
+start_zone = [
+    [pygame.rect.Rect(0, 0, 96, 96), 1],
+    [pygame.rect.Rect(1184, 0, 96, 96), 2],
+    [pygame.rect.Rect(1184, 704, 96, 96), 3],
+    [pygame.rect.Rect(0, 704, 96, 96), 4],
+]
+
+character_zone = [
+    [pygame.rect.Rect(544, 384, 32, 32), "soldier"],
+    [pygame.rect.Rect(608, 384, 32, 32), "mage"],
+    [pygame.rect.Rect(480, 384, 32, 32), "alien"],
+]
+
+teammate_data = {}
+
 map_system = MapSystem(1280, 800, obstacles)
 
 #Server init
-player = client.send(["initialize", character_choice, team])
-map_system.set_player_pos([player.rect.centerx, player.rect.centery])
+
 
 
 def handle_player(_player):
@@ -152,7 +167,58 @@ def adjust_vertical(_player, _obstacle_list):
                 break
 
 
+while in_menu:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            in_menu = False
+            running = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                for spawning_zone in start_zone:
+                    if spawning_zone[0].collidepoint(pygame.mouse.get_pos()):
+                        team = spawning_zone[1]
+                for character in character_zone:
+                    if character[0].collidepoint(pygame.mouse.get_pos()):
+                        character_choice = character[1]
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                in_menu = False
+
+    screen.blit(game_map, (0, 0))
+
+    for spawning_zone in start_zone:
+        if spawning_zone[1] == team:
+            pygame.draw.rect(screen, "green", spawning_zone[0], 2)
+        else:
+            pygame.draw.rect(screen, "blue", spawning_zone[0], 2)
+
+    for character in character_zone:
+        if character[1] == character_choice:
+            pygame.draw.rect(screen, "green", character[0], 2)
+        else:
+            pygame.draw.rect(screen, "blue", character[0], 2)
+        match character[1]:
+            case "soldier":
+                _image = soldier
+            case "mage":
+                _image = mage
+            case "alien":
+                _image = alien
+            case _:
+                _image = default_player
+        screen.blit(_image, (character[0].x, character[0].y))
+
+
+    pygame.display.flip()
+
+    dt = clock.tick(60) / 1000
+
+
+player = client.send(["initialize", character_choice, team])
+map_system.set_player_pos([player.rect.centerx, player.rect.centery])
+
 while running:
+
     if player.isDead:
         running = False
     # poll for events
@@ -189,8 +255,8 @@ while running:
     # This will return [_id, _id, _id]
     all_active_player = client.send(["all active player", player.id])
 
-    # This will return {"_id":[x, y], "_id":[x, y]}
-    all_player_location = client.send(["all location", [player.rect.x, player.rect.y]])
+    # This will return {"_id":[[x, y], team, vision], "_id":[[x, y], team, vision]}
+    all_player_location = client.send(["all location", [player.rect.x, player.rect.y], team, player.vision])
 
     # This will return {"_id": "character name"}
     all_player_character = client.send(["all player character", player.id])
@@ -201,10 +267,14 @@ while running:
     #This will return {"_id": [current_health, max_health]}
     all_player_health = client.send(["all player health", [player.current_health, player.max_health]])
 
+    #
+    for entity in all_active_player:
+        if entity in all_player_location and not entity == player.id:
+            if all_player_location[entity][1] == team:
+                teammate_data[entity] = [all_player_location[entity][0], all_player_location[entity][2]]
+
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
-
-    #return [id, position, name] of other players
 
     #Drawing all player
     #Note that the main player character will not be covered by fog
@@ -219,23 +289,23 @@ while running:
                     _image = alien
                 case _:
                     _image = default_player
-            screen.blit(_image, all_player_location[entity])
+            screen.blit(_image, all_player_location[entity][0])
 
     #Drawing all health bar
     for entity in all_active_player:
         if entity in all_player_location and entity in all_player_health:
-            max_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, 32, 5)
+            max_hp_rect = pygame.rect.Rect(all_player_location[entity][0][0], all_player_location[entity][0][1] - 10, 32, 5)
             current_hp_bar = (all_player_health[entity][0] / all_player_health[entity][1]) * 32
-            current_hp_rect = pygame.rect.Rect(all_player_location[entity][0], all_player_location[entity][1] - 10, current_hp_bar, 5)
+            current_hp_rect = pygame.rect.Rect(all_player_location[entity][0][0], all_player_location[entity][0][1] - 10, current_hp_bar, 5)
             pygame.draw.rect(pygame.display.get_surface(), "black", max_hp_rect)
             pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
 
     #Drawing all projectile
     total_damage = 0
     for entity in all_active_player:
-        if entity in all_player_projectile:
+        if entity in all_player_projectile and entity in all_player_location:
             for _proj in all_player_projectile[entity][0]:
-                if _proj.colliderect(player.rect) and not entity == player.id:
+                if _proj.colliderect(player.rect) and not entity == player.id and not all_player_location[1] == team:
                     total_damage += all_player_projectile[entity][1]
                 pygame.draw.rect(screen, "red", _proj, 1)
     player.take_damage(total_damage)
@@ -250,7 +320,7 @@ while running:
 
     player.handle_projectile(obstacles, dt)
 
-    map_system.handle_fog(map_system.getEntityNode(player), player.vision, [player.rect.centerx, player.rect.centery])
+    map_system.handle_fog(map_system.getEntityNode(player), player.vision, teammate_data)
 
     #Test Draw
     for _node in heal_zone:

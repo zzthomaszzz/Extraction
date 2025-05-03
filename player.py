@@ -1,10 +1,18 @@
 import pygame
 import math
-
-from pygame.transform import rotate
-
 import projectile
+import ability
 
+def rotate_point(point, center_point, angle):
+
+    angle_rad = math.radians(angle % 360)
+    # Shift the point so that center_point becomes the origin
+    new_point = (point[0] - center_point[0], point[1] - center_point[1])
+    new_point = (new_point[0] * math.cos(angle_rad) - new_point[1] * math.sin(angle_rad),
+                 new_point[0] * math.sin(angle_rad) + new_point[1] * math.cos(angle_rad))
+    # Reverse the shifting we have done
+    new_point = (new_point[0] + center_point[0], new_point[1] + center_point[1])
+    return new_point
 
 class Player:
 
@@ -106,7 +114,7 @@ class Soldier(Player):
         self.speed = 125
         self.vision = 300
         self.max_health = 550
-        self.current_health = 200
+        self.current_health = 550
         self.projectile_speed = 600
         self.damage = 40
 
@@ -168,19 +176,6 @@ class Alien(Player):
             _projectile.update(dt)
             if _projectile.kill:
                 self.projectile.remove(_projectile)
-
-
-def rotate_point(point, center_point, angle):
-
-    angle_rad = math.radians(angle % 360)
-    # Shift the point so that center_point becomes the origin
-    new_point = (point[0] - center_point[0], point[1] - center_point[1])
-    new_point = (new_point[0] * math.cos(angle_rad) - new_point[1] * math.sin(angle_rad),
-                 new_point[0] * math.sin(angle_rad) + new_point[1] * math.cos(angle_rad))
-    # Reverse the shifting we have done
-    new_point = (new_point[0] + center_point[0], new_point[1] + center_point[1])
-    return new_point
-
 
 class Mage(Player):
     def __init__(self, _id, location):
