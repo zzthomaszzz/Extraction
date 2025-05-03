@@ -42,10 +42,10 @@ mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 
 #INPUTS
-host = "127.0.0.1"
+host = input("Enter Host Address: ")
 port = 5000
-character_choice = "soldier"
-team = 4
+character_choice = input("Enter your character [soldier] - [alien] - [mage]: ")
+team = int(input("starting position [1 - 4]:"))
 
 client = Client(host, port)
 
@@ -121,15 +121,6 @@ def handle_player(_player):
     if _player.rect.y + 32 > 800:
         _player.rect.y = 800 - 32
     adjust_vertical(_player, map_system.obstacles)
-
-
-def handle_projectile(_projectiles):
-    for _projectile in _projectiles:
-        _projectile.update(dt)
-        if _projectile.rect.x < 0 or _projectile.rect.x + _projectile.size > 1280 or _projectile.rect.y < 0 or _projectile.rect.y + _projectile.size > 800:
-            _projectiles.remove(_projectile)
-        elif _projectile.rect.collidelist(obstacles) >= 0:
-            _projectiles.remove(_projectile)
 
 
 def adjust_horizontal(_player, _obstacle_list):
@@ -248,7 +239,7 @@ while running:
 
     handle_player(player)
 
-    handle_projectile(player.projectile)
+    player.handle_projectile(obstacles, dt)
 
     map_system.handle_fog(map_system.getEntityNode(player), player.vision, [player.rect.centerx, player.rect.centery])
 

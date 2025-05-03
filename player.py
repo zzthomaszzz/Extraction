@@ -17,13 +17,13 @@ class Player:
 
         #Projectile data
         self.projectile = []
-        self.max_projectile = 10
+        self.max_projectile = 3
         self.projectile_size = 5
         self.projectile_speed = 300
 
         #I_frame data
         self.isInvincible = False
-        self.i_frame_duration = 0.25
+        self.i_frame_duration = 0.2
         self.i_frame_count = 0
 
         #Basic Stat Data
@@ -39,6 +39,14 @@ class Player:
 
     def update(self, dt):
         self.handle_i_frame(dt)
+
+    def handle_projectile(self, obstacles, dt):
+        for _projectile in self.projectile:
+            _projectile.update(dt)
+            if _projectile.rect.x < 0 or _projectile.rect.x + _projectile.size > 1280 or _projectile.rect.y < 0 or _projectile.rect.y + _projectile.size > 800:
+                self.projectile.remove(_projectile)
+            elif _projectile.rect.collidelist(obstacles) >= 0:
+                self.projectile.remove(_projectile)
 
     def handle_i_frame(self, dt):
         if self.isInvincible:
@@ -81,16 +89,15 @@ class Soldier(Player):
     def __init__(self, _id, location):
         super().__init__(_id, location)
         self.name = "soldier"
-
         self.image_path = "asset/soldier.png"
 
         #Basic stats
-        self.speed = 100
-        self.vision = 400
-        self.max_health = 500
-        self.current_health = 500
-        self.projectile_speed = 500
-        self.damage = 25
+        self.speed = 80
+        self.vision = 300
+        self.max_health = 550
+        self.current_health = 550
+        self.projectile_speed = 350
+        self.damage = 40
 
 class Alien(Player):
 
@@ -101,21 +108,40 @@ class Alien(Player):
         self.image_path = "asset/alien.png"
 
         # Basic stats
-        self.speed = 100
-        self.vision = 400
-        self.max_health = 500
-        self.current_health = 500
-        self.projectile_speed = 500
-        self.max_projectile = 4
-        self.vision = 300
-        self.damage = 25
+        self.speed = 120
+        self.vision = 250
+        self.max_health = 800
+        self.current_health = 800
+        self.max_projectile = 1
+        self.vision = 250
+        self.damage = 20
 
 
     #Passive data
         self.regen = 5
         self.counter = 0
 
+
+    def basic_attack(self, point = (0,0)):
+        if len(self.projectile) < self.max_projectile:
+            self.projectile.append(projectile.Claw(self.rect.centerx, self.rect.centery))
+
     def update(self, dt):
+        super().update(dt)
+        self.regenerate(dt)
+
+        if len(self.projectile) > 0:
+            self.speed = 0
+        else:
+            self.speed = 100
+
+    def regenerate(self, dt):
+
+        if self.current_health < 200:
+            self.regen = 10
+        else:
+            self.regen = 5
+
         if self.current_health < self.max_health:
             self.counter += dt
             if self.counter >= 1:
@@ -123,6 +149,13 @@ class Alien(Player):
                 self.current_health += self.regen
                 if self.current_health > self.max_health:
                     self.current_health = self.max_health
+
+
+    def handle_projectile(self, obstacles, dt):
+        for _projectile in self.projectile:
+            _projectile.update(dt)
+            if _projectile.kill:
+                self.projectile.remove(_projectile)
 
 
 def rotate_point(point, center_point, angle):
@@ -141,23 +174,33 @@ class Mage(Player):
     def __init__(self, _id, location):
         super().__init__(_id, location)
         self.name = "mage"
-        self.vision = 350
         self.image_path = "asset/mage.png"
-        self.cooldown = 1
+
+        # Basic stats
+        self.speed = 100
+        self.vision = 350
+        self.max_health = 500
+        self.current_health = 500
+        self.projectile_speed = 400
+        self.max_projectile = 5
+        self.damage = 15
+
+        #Passive data
+        #For orbiting circle
+        self.cooldown = 0.5
         self.counter = 0
         self.angle = 0
         self.rotation_speed = 180
         self.orbit_range = 15
 
-        # Basic stats
-        self.speed = 100
-        self.vision = 400
-        self.max_health = 500
-        self.current_health = 500
-        self.projectile_speed = 400
-        self.max_projectile = 5
-        self.vision = 300
-        self.damage = 25
+    def handle_projectile(self, obstacles, dt):
+        for _projectile in self.projectile:
+            _projectile.update(dt)
+            if not _projectile.orbit:
+                if _projectile.rect.x < 0 or _projectile.rect.x + _projectile.size > 1280 or _projectile.rect.y < 0 or _projectile.rect.y + _projectile.size > 800:
+                    self.projectile.remove(_projectile)
+                elif _projectile.rect.collidelist(obstacles) >= 0:
+                    self.projectile.remove(_projectile)
 
     def update(self, dt):
         super().update(dt)

@@ -87,7 +87,6 @@ def process_data(data, _id):
                     player = Player(_id, location)
             return player
         case "all location":
-            print(all_player_location)
             all_player_location[_id] = data[1]
             return all_player_location
         case _:

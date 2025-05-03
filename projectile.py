@@ -36,3 +36,17 @@ class FireBall(Projectile):
         self.direction = direction
         self.speed = speed
         self.orbit = False
+
+
+class Claw(Projectile):
+    def __init__(self, x, y, size=80):
+        super().__init__(x, y, size)
+        self.linger_time = 0.25
+        self.counter = 0
+        self.kill = False
+
+    def update(self, dt):
+        if not self.kill:
+            self.counter += dt
+        if self.counter > self.linger_time:
+            self.kill = True
