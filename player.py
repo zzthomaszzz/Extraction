@@ -187,7 +187,7 @@ class Mage(Player):
         self.current_health = 500
         self.projectile_speed = 400
         self.max_projectile = 5
-        self.damage = 15
+        self.damage = 30
 
         #Passive data
         #For orbiting circle

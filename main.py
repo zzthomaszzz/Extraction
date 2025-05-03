@@ -244,11 +244,6 @@ while running:
     map_system.handle_fog(map_system.getEntityNode(player), player.vision, [player.rect.centerx, player.rect.centery])
 
 
-    #Testing Feature
-
-    for _object in obstacles:
-        pygame.draw.rect(screen, "blue", _object, 1)
-
     # flip() the display to put your work on screen
     pygame.display.flip()
 
