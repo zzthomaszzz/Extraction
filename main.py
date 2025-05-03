@@ -42,10 +42,10 @@ mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 
 #INPUTS
-host = "127.0.0.1"
+host = input("Enter host address: ")
 port = 5000
-character_choice = "soldier"
-team = 1
+character_choice = input("[soldier], [mage], [alien]: ")
+team = int(input("Starting position 1-4"))
 
 client = Client(host, port)
 
