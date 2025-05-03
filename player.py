@@ -39,6 +39,8 @@ class Player:
 
     def update(self, dt):
         self.handle_i_frame(dt)
+        if self.current_health < 0:
+            self.isDead = True
 
     def handle_projectile(self, obstacles, dt):
         for _projectile in self.projectile:
@@ -108,6 +110,7 @@ class Alien(Player):
         self.image_path = "asset/alien.png"
 
         # Basic stats
+        self.default_speed = 120
         self.speed = 120
         self.vision = 250
         self.max_health = 800
@@ -128,27 +131,28 @@ class Alien(Player):
 
     def update(self, dt):
         super().update(dt)
-        self.regenerate(dt)
-
         if len(self.projectile) > 0:
             self.speed = 0
         else:
-            self.speed = 100
+            self.speed = self.default_speed
+        self.regenerate(dt)
 
     def regenerate(self, dt):
+        if not self.isDead:
+            if self.current_health < 200:
+                self.regen = 10
+                self.speed = self.default_speed / 2
+            else:
+                self.regen = 5
+                self.speed = self.default_speed
 
-        if self.current_health < 200:
-            self.regen = 10
-        else:
-            self.regen = 5
-
-        if self.current_health < self.max_health:
-            self.counter += dt
-            if self.counter >= 1:
-                self.counter = 0
-                self.current_health += self.regen
-                if self.current_health > self.max_health:
-                    self.current_health = self.max_health
+            if self.current_health < self.max_health:
+                self.counter += dt
+                if self.counter >= 1:
+                    self.counter = 0
+                    self.current_health += self.regen
+                    if self.current_health > self.max_health:
+                        self.current_health = self.max_health
 
 
     def handle_projectile(self, obstacles, dt):
