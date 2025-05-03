@@ -146,6 +146,8 @@ def adjust_vertical(_player, _obstacle_list):
 
 
 while running:
+    if player.isDead:
+        running = False
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
