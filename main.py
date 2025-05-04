@@ -227,9 +227,12 @@ point = 0
 spawn = player.rect
 
 winner = ""
+in_winner_screen = True
 
-dead_timer = 10
+dead_timer = 5
 dead_counter = 0
+
+
 
 while running:
 
@@ -244,6 +247,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+            in_winner_screen = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 player.basic_attack(pygame.mouse.get_pos())
@@ -341,12 +345,11 @@ while running:
     map_system.draw()
 
     #Client update
-    if not player.isDead:
-        player.update(dt)
+    player.update(dt)
 
-        handle_player(player)
+    handle_player(player)
 
-        player.handle_projectile(obstacles, dt)
+    player.handle_projectile(obstacles, dt)
 
     refresh_counter += dt
     if refresh_counter > refresh_rate:
@@ -374,7 +377,6 @@ while running:
     # independent physics.
     dt = clock.tick(60) / 1000
 
-in_winner_screen = True
 while in_winner_screen:
 
     for event in pygame.event.get():
