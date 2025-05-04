@@ -59,7 +59,7 @@ def process_data(data, _id):
             return None
         case "team progress":
             for key in team_progress:
-                if team_progress[key] > 5:
+                if team_progress[key] > 100:
                     return key
             return team_progress
         case "all player health":
@@ -99,7 +99,7 @@ def process_data(data, _id):
                     player = Player(_id, location)
             return player
         case "all location":
-            all_player_location[_id] = [data[1], data[2], data[3]]
+            all_player_location[_id] = [data[1], data[2]]
             return all_player_location
         case _:
             return data

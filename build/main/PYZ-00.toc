@@ -35,6 +35,7 @@
   ('_threading_local',
    'C:\\Users\\Thomas\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\_threading_local.py',
    'PYMODULE'),
+  ('ability', 'C:\\Users\\Thomas\\Desktop\\Extraction\\ability.py', 'PYMODULE'),
   ('argparse',
    'C:\\Users\\Thomas\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\argparse.py',
    'PYMODULE'),

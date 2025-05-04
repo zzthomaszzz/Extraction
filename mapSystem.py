@@ -3,7 +3,7 @@ from node import Node
 import math
 
 class MapSystem:
-    def __init__(self, sizeX, sizeY, obstacles):
+    def __init__(self, sizeX, sizeY, obstacles, spawn):
         #Grid map is 40 * 25
         self.size = 32
         self.sizeX = sizeX
@@ -15,11 +15,12 @@ class MapSystem:
         self.non_traversable_nodes = []
         self.nodes = []
         self.obstacles = obstacles
+        self.spawns = spawn
         self.discovered_nodes = []
         self.initNode()
         self.setObstacles()
+        self.setSpawn()
         self.previous_player_pos = []
-        self.fog_update_distance = 16
 
     def initNode(self):
         y = 0
@@ -34,8 +35,14 @@ class MapSystem:
     def draw(self):
         for i in self.nodes:
             for node in i:
-                if not node.discovered:
+                if not node.discovered and not node.isSpawn:
                     pygame.draw.rect(pygame.display.get_surface(), "black", node.rect)
+
+    def setSpawn(self):
+        for item in self.nodes:
+            for node in item:
+                if node.rect.collidelist(self.spawns) >= 0:
+                    node.isSpawn = 1
 
     def setObstacles(self):
         for item in self.nodes:
@@ -72,14 +79,10 @@ class MapSystem:
             pass
         return adj_node
 
-    def handle_fog(self, origin_node, vision, teammate):
+    def handle_fog(self, origin_node, vision):
         for _node in self.discovered_nodes:
             _node.discovered = 0
         self._handle_fog(origin_node, vision, origin_node)
-        for member in teammate:
-            _node = self.getNodeFromPos(teammate[member][0][0], teammate[member][0][1])
-            _node.discovered = 0
-            self._handle_fog(_node, teammate[member][1], _node)
 
     def _handle_fog(self, node, vision, originNode):
         dist = math.hypot(node.rect.centerx - originNode.rect.centerx, node.rect.centery - originNode.rect.centery)

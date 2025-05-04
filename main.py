@@ -43,7 +43,7 @@ mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 
 #INPUTS
-host = "127.0.0.1"
+host = input("Enter host address: ")
 port = 5000
 character_choice = "default_player"
 team = 1
@@ -127,10 +127,14 @@ capture_zone = pygame.rect.Rect(512, 320, 255, 127)
 
 team_progress = {"1": 0, "2": 0, "3": 0, "4": 0}
 
-map_system = MapSystem(1280, 800, obstacles)
+spawn_zone = [
+    pygame.rect.Rect(0, 0, 96, 96),
+    pygame.rect.Rect(1184, 0, 96, 96),
+    pygame.rect.Rect(1184, 704, 96, 96),
+    pygame.rect.Rect(0, 704, 96, 96)
+]
 
-#Server init
-
+map_system = MapSystem(1280, 800, obstacles, spawn_zone)
 
 
 def handle_player(_player):
@@ -221,10 +225,11 @@ while in_menu:
 player = client.send(["initialize", character_choice, team])
 map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
+
 refresh_rate = 0.25
 refresh_counter = 0
+
 point = 0
-spawn = player.rect
 
 winner = ""
 in_winner_screen = True
@@ -232,15 +237,22 @@ in_winner_screen = True
 dead_timer = 5
 dead_counter = 0
 
+spawn = {"1": [0,0], "2": [1247, 0], "3":[1247, 767], "4": [0, 767]}
 
+spawn_bar = {"1": [0,0], "2": [1184, 0], "3":[1184, 704], "4": [0, 704]}
+
+win_condition = 100
+
+show_grid = False
 
 while running:
 
     if player.isDead:
-        player.rect = spawn
+        player.rect.x, player.rect.y = spawn[str(team)][0], spawn[str(team)][1]
         dead_counter += dt
         if dead_counter > dead_timer:
             player.isDead = False
+            player.current_health = player.max_health
             dead_counter = 0
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
@@ -249,9 +261,14 @@ while running:
             running = False
             in_winner_screen = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
+            if event.button == 1 and not player.isDead:
                 player.basic_attack(pygame.mouse.get_pos())
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                if show_grid:
+                    show_grid = False
+                else:
+                    show_grid = True
             if event.key == pygame.K_a:
                 player.left = 1
             if event.key == pygame.K_d:
@@ -262,6 +279,7 @@ while running:
                 player.up = 1
             if event.key == pygame.K_ESCAPE:
                 running = False
+                in_winner_screen = False
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
                 player.left = 0
@@ -278,7 +296,7 @@ while running:
     all_active_player = client.send(["all active player", player.id])
 
     # This will return {"_id":[[x, y], team, vision], "_id":[[x, y], team, vision]}
-    all_player_location = client.send(["all location", [player.rect.x, player.rect.y], team, player.vision])
+    all_player_location = client.send(["all location", [player.rect.x, player.rect.y], team])
 
     # This will return {"_id": "character name"}
     all_player_character = client.send(["all player character", player.id])
@@ -291,14 +309,6 @@ while running:
 
     #This return team progress for capture the flag
     team_progress = client.send(["team progress", player.id])
-
-
-
-    #
-    for entity in all_active_player:
-        if entity in all_player_location and not entity == player.id:
-            if all_player_location[entity][1] == team:
-                teammate_data[entity] = [all_player_location[entity][0], all_player_location[entity][2]]
 
     if team_progress == "1" or team_progress == "2" or team_progress == "3" or team_progress == "4":
         winner = team_progress
@@ -329,7 +339,10 @@ while running:
             current_hp_bar = (all_player_health[entity][0] / all_player_health[entity][1]) * 32
             current_hp_rect = pygame.rect.Rect(all_player_location[entity][0][0], all_player_location[entity][0][1] - 10, current_hp_bar, 5)
             pygame.draw.rect(pygame.display.get_surface(), "black", max_hp_rect)
-            pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
+            if all_player_location[entity][1] == team:
+                pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
+            else:
+                pygame.draw.rect(pygame.display.get_surface(), "red", current_hp_rect)
 
     #Drawing all projectile
     total_damage = 0
@@ -344,6 +357,14 @@ while running:
     #Drawing fog of war
     map_system.draw()
 
+    #Drawing progress bar
+    for key in team_progress:
+        progress_bar = pygame.rect.Rect(spawn_bar[key][0], spawn_bar[key][1], 95, 5)
+        current_progress = (team_progress[key] / win_condition) * 95
+        current_progress_bar = pygame.rect.Rect(spawn_bar[key][0], spawn_bar[key][1], current_progress, 5)
+        pygame.draw.rect(screen, "black", progress_bar)
+        pygame.draw.rect(screen, "purple", current_progress_bar)
+
     #Client update
     player.update(dt)
 
@@ -353,7 +374,7 @@ while running:
 
     refresh_counter += dt
     if refresh_counter > refresh_rate:
-        map_system.handle_fog(map_system.getEntityNode(player), player.vision, teammate_data)
+        map_system.handle_fog(map_system.getEntityNode(player), player.vision)
         refresh_counter = 0
 
     for _node in heal_zone:
@@ -366,6 +387,13 @@ while running:
     if point > 1:
         client.send_no_recv(["capture", str(team)])
         point = 0
+
+
+    #Test Drawing
+    if show_grid:
+        for i in map_system.nodes:
+            for _node in i:
+                pygame.draw.rect(screen, "red", _node.rect, 1)
 
 
 
@@ -382,8 +410,20 @@ while in_winner_screen:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             in_winner_screen = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                in_winner_screen = False
 
     screen.blit(game_map, (0, 0))
+
+    if winner == "1":
+        pygame.draw.rect(screen, "green", start_zone[0][0])
+    elif winner == "2":
+        pygame.draw.rect(screen, "green", start_zone[1][0])
+    elif winner == "3":
+        pygame.draw.rect(screen, "green", start_zone[2][0])
+    elif winner == "4":
+        pygame.draw.rect(screen, "green", start_zone[3][0])
 
     pygame.display.flip()
 

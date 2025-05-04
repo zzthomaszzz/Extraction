@@ -114,7 +114,7 @@ class Soldier(Player):
         self.speed = 125
         self.vision = 300
         self.max_health = 550
-        self.current_health = 100
+        self.current_health = 550
         self.projectile_speed = 600
         self.damage = 40
 
