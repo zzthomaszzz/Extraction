@@ -45,8 +45,8 @@ default_player = pygame.image.load("asset/default_player.png")
 #INPUTS
 host = "127.0.0.1"
 port = 5000
-character_choice = ""
-team = 0
+character_choice = "default_player"
+team = 1
 
 client = Client(host, port)
 
@@ -122,6 +122,10 @@ character_zone = [
 ]
 
 teammate_data = {}
+
+capture_zone = pygame.rect.Rect(512, 320, 255, 127)
+
+team_progress = {"1": 0, "2": 0, "3": 0, "4": 0}
 
 map_system = MapSystem(1280, 800, obstacles)
 
@@ -219,11 +223,22 @@ map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
 refresh_rate = 0.25
 refresh_counter = 0
+point = 0
+spawn = player.rect
+
+winner = ""
+
+dead_timer = 10
+dead_counter = 0
 
 while running:
 
     if player.isDead:
-        running = False
+        player.rect = spawn
+        dead_counter += dt
+        if dead_counter > dead_timer:
+            player.isDead = False
+            dead_counter = 0
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
@@ -270,11 +285,20 @@ while running:
     #This will return {"_id": [current_health, max_health]}
     all_player_health = client.send(["all player health", [player.current_health, player.max_health]])
 
+    #This return team progress for capture the flag
+    team_progress = client.send(["team progress", player.id])
+
+
+
     #
     for entity in all_active_player:
         if entity in all_player_location and not entity == player.id:
             if all_player_location[entity][1] == team:
                 teammate_data[entity] = [all_player_location[entity][0], all_player_location[entity][2]]
+
+    if team_progress == "1" or team_progress == "2" or team_progress == "3" or team_progress == "4":
+        winner = team_progress
+        break
 
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
@@ -317,21 +341,29 @@ while running:
     map_system.draw()
 
     #Client update
-    player.update(dt)
+    if not player.isDead:
+        player.update(dt)
 
-    handle_player(player)
+        handle_player(player)
 
-    player.handle_projectile(obstacles, dt)
+        player.handle_projectile(obstacles, dt)
 
     refresh_counter += dt
     if refresh_counter > refresh_rate:
         map_system.handle_fog(map_system.getEntityNode(player), player.vision, teammate_data)
         refresh_counter = 0
 
-    #Test Draw
     for _node in heal_zone:
         if player.rect.colliderect(_node):
             player.heal(50 * dt)
+
+
+    if player.rect.colliderect(capture_zone):
+        point += dt
+    if point > 1:
+        client.send_no_recv(["capture", str(team)])
+        point = 0
+
 
 
     # flip() the display to put your work on screen
@@ -341,5 +373,16 @@ while running:
     # dt is delta time in seconds since last frame, used for framerate-
     # independent physics.
     dt = clock.tick(60) / 1000
+
+in_winner_screen = True
+while in_winner_screen:
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            in_winner_screen = False
+
+    screen.blit(game_map, (0, 0))
+
+    pygame.display.flip()
 
 pygame.quit()

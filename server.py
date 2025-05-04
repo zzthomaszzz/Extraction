@@ -11,6 +11,8 @@ all_player_character = {}
 all_player_projectile = {}
 all_player_health = {}
 
+team_progress = {"1": 0, "2": 0, "3": 0, "4": 0}
+
 #Team Data
 
 def handle_client(client, address, _id):
@@ -29,7 +31,8 @@ def handle_client(client, address, _id):
             if not data:
                 break
             response = process_data(pickle.loads(data), _id)
-            client.sendall(pickle.dumps(response))
+            if response is not None:
+                client.sendall(pickle.dumps(response))
     except Exception as e:
         print(f"Error handling client {address}: {e}")
     finally:
@@ -50,6 +53,15 @@ def remove(_id):
 
 def process_data(data, _id):
     match data[0]:
+        case "capture":
+            print("Received")
+            team_progress[data[1]] += 1
+            return None
+        case "team progress":
+            for key in team_progress:
+                if team_progress[key] > 5:
+                    return key
+            return team_progress
         case "all player health":
             all_player_health[_id] = data[1]
             return all_player_health
