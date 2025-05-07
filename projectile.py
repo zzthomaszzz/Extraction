@@ -9,9 +9,9 @@ class Projectile:
 
 class Bullet(Projectile):
 
-    def __init__(self, x, y, direction, speed, size=5):
+    def __init__(self, x, y, direction, size=5):
         super().__init__(x, y, size)
-        self.speed = speed
+        self.speed = 600
         self.direction = direction
 
     def update(self, dt):
@@ -22,7 +22,7 @@ class FireBall(Projectile):
 
     def __init__(self, x, y, index, size=5):
         super().__init__(x, y, size)
-        self.speed = 0
+        self.speed = 500
         self.direction = [0, 0]
         self.orbit = True
         self.index = index
@@ -32,16 +32,15 @@ class FireBall(Projectile):
             self.rect.x += self.direction[0] * self.speed * dt
             self.rect.y += self.direction[1] * self.speed * dt
 
-    def fire(self, direction, speed):
+    def fire(self, direction):
         self.direction = direction
-        self.speed = speed
         self.orbit = False
 
 
 class Claw(Projectile):
-    def __init__(self, x, y, size=80):
+    def __init__(self, x, y, size=60):
         super().__init__(x, y, size)
-        self.linger_time = 0.25
+        self.linger_time = 0.2
         self.counter = 0
         self.kill = False
 

@@ -263,6 +263,8 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and not player.isDead:
                 player.basic_attack(pygame.mouse.get_pos())
+            if event.button == 3 and not player.isDead:
+                player.alternate_attack(pygame.mouse.get_pos())
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_t:
                 if show_grid:
@@ -317,10 +319,10 @@ while running:
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
 
-    #Drawing all player
+    #Drawing all players and their health bars
     #Note that the main player character will not be covered by fog
     for entity in all_active_player:
-        if entity in all_player_character and entity in all_player_location:
+        if entity in all_player_character and entity in all_player_location and entity in all_player_health:
             match all_player_character[entity]:
                 case "mage":
                     _image = mage
@@ -332,9 +334,6 @@ while running:
                     _image = default_player
             screen.blit(_image, all_player_location[entity][0])
 
-    #Drawing all health bar
-    for entity in all_active_player:
-        if entity in all_player_location and entity in all_player_health:
             max_hp_rect = pygame.rect.Rect(all_player_location[entity][0][0], all_player_location[entity][0][1] - 10, 32, 5)
             current_hp_bar = (all_player_health[entity][0] / all_player_health[entity][1]) * 32
             current_hp_rect = pygame.rect.Rect(all_player_location[entity][0][0], all_player_location[entity][0][1] - 10, current_hp_bar, 5)

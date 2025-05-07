@@ -23,14 +23,10 @@ class Player:
         self.image_path = "asset/default_player.png"
         self.id = _id
 
-        #Sprite
-        self.flip = False
-
         #Projectile data
         self.projectile = []
         self.max_projectile = 3
         self.projectile_size = 5
-        self.projectile_speed = 300
 
         #I_frame data
         self.isInvincible = False
@@ -46,7 +42,6 @@ class Player:
 
         #Status data
         self.isDead = False
-        self.hasFlag = False
 
     def update(self, dt):
         self.handle_i_frame(dt)
@@ -76,14 +71,10 @@ class Player:
         direction_x = round(math.cos(angle), 2)
 
         if len(self.projectile) < self.max_projectile:
-            self.projectile.append(projectile.Bullet(self.rect.centerx, self.rect.centery, [direction_x, direction_y], self.projectile_speed))
+            self.projectile.append(projectile.Bullet(self.rect.centerx, self.rect.centery, [direction_x, direction_y]))
 
-    def draw_health_bar(self):
-        max_hp_rect = pygame.rect.Rect(self.rect.x, self.rect.y - 10, 32, 5)
-        current_hp_bar = (self.current_health / self.max_health) * 32
-        current_hp_rect = pygame.rect.Rect(self.rect.x, self.rect.y - 10, current_hp_bar, 5)
-        pygame.draw.rect(pygame.display.get_surface(), "black", max_hp_rect)
-        pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
+    def alternate_attack(self, point):
+        pass
 
     def get_projectile_data(self):
         data = []
@@ -115,15 +106,13 @@ class Soldier(Player):
         self.vision = 300
         self.max_health = 550
         self.current_health = 550
-        self.projectile_speed = 600
-        self.damage = 40
+        self.damage = 50
 
 class Alien(Player):
 
     def __init__(self, _id, location):
         super().__init__(_id, location)
         self.name = "alien"
-
         self.image_path = "asset/alien.png"
 
         # Basic stats
@@ -134,7 +123,7 @@ class Alien(Player):
         self.current_health = 800
         self.max_projectile = 1
         self.vision = 250
-        self.damage = 20
+        self.damage = 35
 
 
     #Passive data
@@ -148,28 +137,29 @@ class Alien(Player):
 
     def update(self, dt):
         super().update(dt)
-        self.regenerate(dt)
-        if len(self.projectile) > 0:
-            self.speed = 0
+        if not self.isDead:
+            self.set_regeneration_rate()
+            self.regenerate(dt)
 
+    def set_regeneration_rate(self):
+        if self.current_health < 150:
+            self.regen = 15
+            self.speed = self.default_speed / 3
+        elif self.current_health < 400:
+            self.regen = 10
+            self.speed = self.default_speed / 2
+        else:
+            self.regen = 5
+            self.speed = self.default_speed
 
     def regenerate(self, dt):
-        if not self.isDead:
-            if self.current_health < 200:
-                self.regen = 10
-                self.speed = self.default_speed / 3
-            else:
-                self.regen = 5
-                self.speed = self.default_speed
-
-            if self.current_health < self.max_health:
-                self.counter += dt
-                if self.counter >= 1:
-                    self.counter = 0
-                    self.current_health += self.regen
-                    if self.current_health > self.max_health:
-                        self.current_health = self.max_health
-
+        if self.current_health < self.max_health:
+            self.counter += dt
+            if self.counter >= 1:
+                self.counter = 0
+                self.current_health += self.regen
+                if self.current_health > self.max_health:
+                    self.current_health = self.max_health
 
     def handle_projectile(self, obstacles, dt):
         for _projectile in self.projectile:
@@ -188,9 +178,8 @@ class Mage(Player):
         self.vision = 350
         self.max_health = 500
         self.current_health = 500
-        self.projectile_speed = 400
         self.max_projectile = 5
-        self.damage = 30
+        self.damage = 40
 
         #Passive data
         #For orbiting circle
@@ -198,7 +187,8 @@ class Mage(Player):
         self.counter = 0
         self.angle = 0
         self.rotation_speed = 180
-        self.orbit_range = 15
+        self.default_orbit_range = 25
+        self.orbit_range = 25
 
     def handle_projectile(self, obstacles, dt):
         for _projectile in self.projectile:
@@ -208,6 +198,12 @@ class Mage(Player):
                     self.projectile.remove(_projectile)
                 elif _projectile.rect.collidelist(obstacles) >= 0:
                     self.projectile.remove(_projectile)
+
+    def alternate_attack(self, point):
+        if self.orbit_range == self.default_orbit_range:
+            self.orbit_range = self.default_orbit_range * 2
+        else:
+            self.orbit_range = self.default_orbit_range
 
     def update(self, dt):
         super().update(dt)
@@ -235,5 +231,5 @@ class Mage(Player):
                 direction_y = round(math.sin(radian), 2)
                 direction_x = round(math.cos(radian), 2)
                 direction = [direction_x, direction_y]
-                _proj.fire(direction, self.projectile_speed)
+                _proj.fire(direction)
 

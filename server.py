@@ -54,7 +54,6 @@ def remove(_id):
 def process_data(data, _id):
     match data[0]:
         case "capture":
-            print("Received")
             team_progress[data[1]] += 1
             return None
         case "team progress":
