@@ -44,7 +44,7 @@ default_player = pygame.image.load("asset/default_player.png")
 
 #INPUTS
 host = input("Enter host address: ")
-port = 5000
+port = int(input("Enter host port: "))
 character_choice = "default_player"
 team = 1
 
