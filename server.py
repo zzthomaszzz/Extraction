@@ -2,7 +2,11 @@ import socket
 import threading
 import pickle
 import random
+from time import sleep
+
 from player import *
+
+MAX_PLAYER = 6
 
 #Client data
 currently_active_player = []
@@ -11,7 +15,7 @@ all_player_character = {}
 all_player_projectile = {}
 all_player_health = {}
 
-team_progress = {"1": 0, "2": 0, "3": 0, "4": 0}
+team_progress = {"1": 0, "2": 0}
 
 #Team Data
 
@@ -76,11 +80,7 @@ def process_data(data, _id):
                 case 1:
                     location = [0,0]
                 case 2:
-                    location = [1247, 0]
-                case 3:
                     location = [1247, 767]
-                case 4:
-                    location = [0, 767]
                 case _:
                     location = [0, 0]
             match data[1]:
@@ -113,11 +113,16 @@ def start_server():
 
     print(f"Server listening on {host}:{port}")
     while True:
-        client_socket, addr = server_socket.accept()
-        client_id = random.random()
-        client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
-        client_thread.daemon = True
-        client_thread.start()
+        if len(currently_active_player) < 6:
+            client_id = random.randint(100, 200)
+            if client_id in currently_active_player:
+                continue
+            client_socket, addr = server_socket.accept()
+            client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
+            client_thread.daemon = True
+            client_thread.start()
+        else:
+            sleep(1)
 
 if __name__ == "__main__":
     start_server()

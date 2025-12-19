@@ -1,7 +1,6 @@
 import pygame
 import math
 import projectile
-import ability
 
 def rotate_point(point, center_point, angle):
 
