@@ -13,50 +13,100 @@ port = 5000
 try:
     client = Client(host, port)
 except ConnectionRefusedError as e:
-    print("Server is not running or lobby is full")
+    print("Server is not in_game or in_lobby is full")
     sys.exit()
 
-# pygame setup
+#PRE-LOBBY
+
 pygame.init()
 #make sure the screen size is divisible by 32
 screen = pygame.display.set_mode((1280, 800))
 clock = pygame.time.Clock()
-running = True
-in_menu = True
-dt = 0
+in_lobby = True
 
-#Global Data
-#Where the server data will come through
-
-#list=[_id, _id, _id], We will need this to iterate through dictionaries
-all_active_player = []
-
-#dict={"_id": [x, y]}
-all_player_location = {}
-
-#dict={"_id": "character_name"}
-all_player_character = {}
-
-#dict={"_id":[ Projectile(), Projectile()]}
-all_player_projectile = {}
-
-#dict={"_id": int health}
-all_player_health = {}
-
-#Older version
-projectile_list = []
-
-#client data
+#client assets
 game_map = pygame.image.load("asset/map.png")
 soldier = pygame.image.load("asset/soldier.png")
 alien = pygame.image.load("asset/alien.png")
 mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 
-#INPUTS
-
 character_choice = "default_player"
 team = 1
+
+start_zone = [
+    [pygame.rect.Rect(0, 0, 96, 96), 1],
+    [pygame.rect.Rect(1184, 704, 96, 96), 2],
+]
+
+character_zone = [
+    [pygame.rect.Rect(544, 384, 32, 32), "soldier"],
+    [pygame.rect.Rect(608, 384, 32, 32), "mage"],
+    [pygame.rect.Rect(480, 384, 32, 32), "alien"],
+]
+
+# LOBBY
+while in_lobby:
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            in_lobby = False
+            in_game = False
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                for spawning_zone in start_zone:
+                    if spawning_zone[0].collidepoint(pygame.mouse.get_pos()):
+                        team = spawning_zone[1]
+                for character in character_zone:
+                    if character[0].collidepoint(pygame.mouse.get_pos()):
+                        character_choice = character[1]
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                in_lobby = False
+
+    clock.tick(60)
+
+    screen.blit(game_map, (0, 0))
+
+    for spawning_zone in start_zone:
+        if spawning_zone[1] == team:
+            pygame.draw.rect(screen, "green", spawning_zone[0], 2)
+        else:
+            pygame.draw.rect(screen, "blue", spawning_zone[0], 2)
+
+    for character in character_zone:
+        if character[1] == character_choice:
+            pygame.draw.rect(screen, "green", character[0], 2)
+        else:
+            pygame.draw.rect(screen, "blue", character[0], 2)
+        match character[1]:
+            case "soldier":
+                _image = soldier
+            case "mage":
+                _image = mage
+            case "alien":
+                _image = alien
+            case _:
+                _image = default_player
+        screen.blit(_image, (character[0].x, character[0].y))
+
+    pygame.display.flip()
+
+#PRE-GAME
+
+client_id = client.send(["initialize", character_choice, team])
+
+if client_id is None:
+    print("Failed to receive initial id")
+    sys.exit()
+
+player = Player(client_id, [start_zone[team-1][0].x, start_zone[team-1][0].y])
+
+if player is None:
+    print("Failed to create player object")
+    sys.exit()
+
+capture_zone = pygame.rect.Rect(512, 320, 255, 127)
 
 obstacles = [
     pygame.rect.Rect(224, 288, 63, 63),
@@ -107,30 +157,17 @@ heal_zone = [
     pygame.rect.Rect(576, 32, 31, 31),
 ]
 
-start_zone = [
-    [pygame.rect.Rect(0, 0, 96, 96), 1],
-    [pygame.rect.Rect(1184, 704, 96, 96), 2],
-]
-
-character_zone = [
-    [pygame.rect.Rect(544, 384, 32, 32), "soldier"],
-    [pygame.rect.Rect(608, 384, 32, 32), "mage"],
-    [pygame.rect.Rect(480, 384, 32, 32), "alien"],
-]
-
-teammate_data = {}
-
-capture_zone = pygame.rect.Rect(512, 320, 255, 127)
-
-team_progress = {"1": 0, "2": 0}
-
 spawn_zone = [
     pygame.rect.Rect(0, 0, 96, 96),
     pygame.rect.Rect(1184, 704, 96, 96),
 ]
 
-map_system = MapSystem(1280, 800, obstacles, spawn_zone)
+teammate_data = {}
 
+team_progress = {"1": 0, "2": 0}
+
+map_system = MapSystem(1280, 800, obstacles, spawn_zone)
+map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
 def handle_player(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
@@ -168,68 +205,26 @@ def adjust_vertical(_player, _obstacle_list):
             elif rect.top < _player.rect.bottom < rect.bottom:
                 _player.rect.bottom = rect.top
                 break
+#Global Data
+#Where the server data will come through
 
+#list=[_id, _id, _id], We will need this to iterate through dictionaries
+all_active_player = []
 
-while in_menu:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            in_menu = False
-            running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                for spawning_zone in start_zone:
-                    if spawning_zone[0].collidepoint(pygame.mouse.get_pos()):
-                        team = spawning_zone[1]
-                for character in character_zone:
-                    if character[0].collidepoint(pygame.mouse.get_pos()):
-                        character_choice = character[1]
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_p:
-                in_menu = False
+#dict={"_id": [x, y]}
+all_player_location = {}
 
-    screen.blit(game_map, (0, 0))
+#dict={"_id": "character_name"}
+all_player_character = {}
 
-    for spawning_zone in start_zone:
-        if spawning_zone[1] == team:
-            pygame.draw.rect(screen, "green", spawning_zone[0], 2)
-        else:
-            pygame.draw.rect(screen, "blue", spawning_zone[0], 2)
+#dict={"_id":[ Projectile(), Projectile()]}
+all_player_projectile = {}
 
-    for character in character_zone:
-        if character[1] == character_choice:
-            pygame.draw.rect(screen, "green", character[0], 2)
-        else:
-            pygame.draw.rect(screen, "blue", character[0], 2)
-        match character[1]:
-            case "soldier":
-                _image = soldier
-            case "mage":
-                _image = mage
-            case "alien":
-                _image = alien
-            case _:
-                _image = default_player
-        screen.blit(_image, (character[0].x, character[0].y))
+#dict={"_id": int health}
+all_player_health = {}
 
-
-    pygame.display.flip()
-
-    dt = clock.tick(60) / 1000
-
-
-client_id = client.send(["initialize", character_choice, team])
-
-if client_id is None:
-    print("Failed to receive initial id")
-    sys.exit()
-
-player = Player(client_id, [start_zone[team-1][0].x, start_zone[team-1][0].y])
-
-if player is None:
-    print("Failed to create player object")
-    sys.exit()
-
-map_system.set_player_pos([player.rect.centerx, player.rect.centery])
+#Older version
+projectile_list = []
 
 refresh_rate = 0.25
 refresh_counter = 0
@@ -252,7 +247,12 @@ show_grid = False
 
 all_player_character = client.send(["all player character", player.id])
 
-while running:
+in_game = True
+dt = 0
+
+
+
+while in_game:
 
     if player.isDead:
         player.rect.x, player.rect.y = spawn[str(team)][0], spawn[str(team)][1]
@@ -265,7 +265,7 @@ while running:
     # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            in_game = False
             in_winner_screen = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1 and not player.isDead:
@@ -287,7 +287,7 @@ while running:
             if event.key == pygame.K_w:
                 player.up = 1
             if event.key == pygame.K_ESCAPE:
-                running = False
+                in_game = False
                 in_winner_screen = False
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
