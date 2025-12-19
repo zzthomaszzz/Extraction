@@ -9,7 +9,7 @@ from player import *
 MAX_PLAYER = 6
 
 #Client data
-currently_active_player = []
+current_players = []
 all_player_location = {}
 all_player_character = {}
 all_player_projectile = {}
@@ -22,7 +22,7 @@ team_progress = {"1": 0, "2": 0}
 def handle_client(client, address, _id):
     print(f"Accepted connection from {address}, id: {_id}")
     #
-    currently_active_player.append(_id)
+    current_players.append(_id)
 
     # Run once data goes here
     initialize_data = client.recv(2048)
@@ -45,7 +45,7 @@ def handle_client(client, address, _id):
         print(f"Connection with {address} closed")
 
 def remove(_id):
-    currently_active_player.remove(_id)
+    current_players.remove(_id)
     if _id in all_player_character:
         del all_player_character[_id]
     if _id in all_player_location:
@@ -72,31 +72,27 @@ def process_data(data, _id):
             all_player_projectile[_id] = [data[1], data[2]]
             return all_player_projectile
         case "all active player":
-            return currently_active_player
+            return current_players
         case "all player character":
             return all_player_character
         case "initialize":
             match data[2]:
                 case 1:
-                    location = [0,0]
+                    all_player_location[_id] = [0,0]
                 case 2:
-                    location = [1247, 767]
+                    all_player_location[_id] = [1247, 767]
                 case _:
-                    location = [0, 0]
+                    all_player_location[_id] = [0, 0]
             match data[1]:
                 case "mage":
                     all_player_character[_id] = "mage"
-                    player = Mage(_id, location)
                 case "soldier":
                     all_player_character[_id] = "soldier"
-                    player = Soldier(_id, location)
                 case "alien":
                     all_player_character[_id] = "alien"
-                    player = Alien(_id, location)
                 case _:
                     all_player_character[_id] = "default"
-                    player = Player(_id, location)
-            return player
+            return _id
         case "all location":
             all_player_location[_id] = [data[1], data[2]]
             return all_player_location
@@ -113,9 +109,9 @@ def start_server():
 
     print(f"Server listening on {host}:{port}")
     while True:
-        if len(currently_active_player) < 6:
+        if len(current_players) < 6:
             client_id = random.randint(100, 200)
-            if client_id in currently_active_player:
+            if client_id in current_players:
                 continue
             client_socket, addr = server_socket.accept()
             client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))

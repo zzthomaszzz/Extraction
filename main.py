@@ -4,6 +4,7 @@ import sys
 
 from client import Client
 from mapSystem import MapSystem
+from player import *
 from projectile import Projectile
 
 host = "127.0.0.1"
@@ -59,6 +60,10 @@ team = 1
 
 obstacles = [
     pygame.rect.Rect(224, 288, 63, 63),
+    pygame.rect.Rect(128, 352, 63, 63),
+    pygame.rect.Rect(256, 704, 31, 31),
+    pygame.rect.Rect(256, 576, 63, 63),
+    pygame.rect.Rect(896, 0, 31, 63),
     pygame.rect.Rect(352, 192, 63, 63),
     pygame.rect.Rect(512, 160, 95, 63),
     pygame.rect.Rect(32, 256, 127, 31),
@@ -68,19 +73,19 @@ obstacles = [
     pygame.rect.Rect(384, 320, 31, 63),
     pygame.rect.Rect(288, 640, 127, 31),
     pygame.rect.Rect(384, 544, 63, 31),
-    pygame.rect.Rect(384, 736, 95, 63),
+    pygame.rect.Rect(320, 736, 95, 63),
     pygame.rect.Rect(480, 256, 63, 63),
     pygame.rect.Rect(512, 384, 31, 31),
     pygame.rect.Rect(576, 320, 63, 31),
     pygame.rect.Rect(544, 448, 63, 31),
     pygame.rect.Rect(512, 480, 63, 63),
-    pygame.rect.Rect(480, 672, 255, 31),
-    pygame.rect.Rect(512, 704, 31, 63),
+    pygame.rect.Rect(480, 672, 127, 31),
+    pygame.rect.Rect(512, 704, 31, 31),
     pygame.rect.Rect(608, 608, 127, 31),
     pygame.rect.Rect(672, 480, 31, 31),
     pygame.rect.Rect(768, 512, 127, 95),
     pygame.rect.Rect(928, 576, 63, 63),
-    pygame.rect.Rect(1152, 448, 31, 31),
+    pygame.rect.Rect(1152, 448, 31, 63),
     pygame.rect.Rect(832, 416, 31, 63),
     pygame.rect.Rect(1024, 416, 63, 31),
     pygame.rect.Rect(896, 320, 95, 63),
@@ -104,7 +109,7 @@ heal_zone = [
 
 start_zone = [
     [pygame.rect.Rect(0, 0, 96, 96), 1],
-    [pygame.rect.Rect(1184, 704, 96, 96), 3],
+    [pygame.rect.Rect(1184, 704, 96, 96), 2],
 ]
 
 character_zone = [
@@ -212,9 +217,19 @@ while in_menu:
     dt = clock.tick(60) / 1000
 
 
-player = client.send(["initialize", character_choice, team])
-map_system.set_player_pos([player.rect.centerx, player.rect.centery])
+client_id = client.send(["initialize", character_choice, team])
 
+if client_id is None:
+    print("Failed to receive initial id")
+    sys.exit()
+
+player = Player(client_id, [start_zone[team-1][0].x, start_zone[team-1][0].y])
+
+if player is None:
+    print("Failed to create player object")
+    sys.exit()
+
+map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
 refresh_rate = 0.25
 refresh_counter = 0
@@ -233,7 +248,7 @@ spawn_bar = {"1": [0,0], "2": [1184, 704]}
 
 win_condition = 100
 
-show_grid = True
+show_grid = False
 
 all_player_character = client.send(["all player character", player.id])
 
@@ -253,10 +268,6 @@ while running:
             running = False
             in_winner_screen = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                for obstacle in obstacles:
-                    if obstacle.collidepoint(pygame.mouse.get_pos()):
-                        print(obstacle.x, obstacle.y)
             if event.button == 1 and not player.isDead:
                 player.basic_attack(pygame.mouse.get_pos())
             if event.button == 3 and not player.isDead:
@@ -293,7 +304,7 @@ while running:
     # This will return [_id, _id, _id]
     all_active_player = client.send(["all active player", player.id])
 
-    # This will return {"_id":[[x, y], team, vision], "_id":[[x, y], team, vision]}
+    # This will return {"_id":[[x, y], team], "_id":[[x, y], team]}
     all_player_location = client.send(["all location", [player.rect.x, player.rect.y], team])
 
     #This will return {"_id": [[projectile.rect, projectile.rect], player.damage]}
@@ -308,6 +319,29 @@ while running:
     if team_progress == "1" or team_progress == "2" or team_progress == "3" or team_progress == "4":
         winner = team_progress
         break
+
+    #Client update
+    player.update(dt)
+
+    handle_player(player)
+
+    player.handle_projectile(obstacles, dt)
+
+    refresh_counter += dt
+    if refresh_counter > refresh_rate:
+        map_system.handle_fog(map_system.getEntityNode(player), player.vision)
+        refresh_counter = 0
+
+    for _node in heal_zone:
+        if player.rect.colliderect(_node):
+            player.heal(50 * dt)
+
+
+    if player.rect.colliderect(capture_zone):
+        point += dt
+    if point > 1:
+        client.send_no_recv(["capture", str(team)])
+        point = 0
 
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
@@ -337,17 +371,13 @@ while running:
                 pygame.draw.rect(pygame.display.get_surface(), "red", current_hp_rect)
 
     #Drawing all projectile
-    total_damage = 0
     for entity in all_active_player:
         if entity in all_player_projectile and entity in all_player_location:
             for _proj in all_player_projectile[entity][0]:
-                if _proj.colliderect(player.rect) and not entity == player.id and not all_player_location[entity][1] == team:
-                    total_damage += all_player_projectile[entity][1]
                 pygame.draw.rect(screen, "red", _proj, 1)
-    player.take_damage(total_damage)
 
     #Drawing fog of war
-    # map_system.draw()
+    map_system.draw()
 
     #Drawing progress bar
     for key in team_progress:
@@ -356,30 +386,6 @@ while running:
         current_progress_bar = pygame.rect.Rect(spawn_bar[key][0], spawn_bar[key][1], current_progress, 5)
         pygame.draw.rect(screen, "black", progress_bar)
         pygame.draw.rect(screen, "purple", current_progress_bar)
-
-    #Client update
-    player.update(dt)
-
-    handle_player(player)
-
-    player.handle_projectile(obstacles, dt)
-
-    refresh_counter += dt
-    if refresh_counter > refresh_rate:
-        map_system.handle_fog(map_system.getEntityNode(player), player.vision)
-        refresh_counter = 0
-
-    for _node in heal_zone:
-        if player.rect.colliderect(_node):
-            player.heal(50 * dt)
-
-
-    if player.rect.colliderect(capture_zone):
-        point += dt
-    if point > 1:
-        client.send_no_recv(["capture", str(team)])
-        point = 0
-
 
     #Test Drawing
     if show_grid:
