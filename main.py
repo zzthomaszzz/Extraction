@@ -16,16 +16,15 @@ except ConnectionRefusedError as e:
     print("Server is not in_game or in_lobby is full")
     sys.exit()
 
+#-----------------------------------------------------------------------------------------------------------------------
 #PRE-LOBBY
 
 pygame.init()
 #make sure the screen size is divisible by 32
-screen = pygame.display.set_mode((1280, 800))
-clock = pygame.time.Clock()
-in_lobby = True
 
-#client assets
+#ASSETS
 game_map = pygame.image.load("asset/map.png")
+lobby = pygame.image.load("asset/lobby.png")
 soldier = pygame.image.load("asset/soldier.png")
 alien = pygame.image.load("asset/alien.png")
 mage = pygame.image.load("asset/mage.png")
@@ -34,17 +33,31 @@ default_player = pygame.image.load("asset/default_player.png")
 character_choice = "default_player"
 team = 1
 
-start_zone = [
-    [pygame.rect.Rect(0, 0, 96, 96), 1],
-    [pygame.rect.Rect(1184, 704, 96, 96), 2],
+team_holder = [
+    [pygame.rect.Rect(160, 608, 192, 64), 1],
+    [pygame.rect.Rect(928, 608, 192, 64), 2],
 ]
 
-character_zone = [
-    [pygame.rect.Rect(544, 384, 32, 32), "soldier"],
-    [pygame.rect.Rect(608, 384, 32, 32), "mage"],
-    [pygame.rect.Rect(480, 384, 32, 32), "alien"],
+character_holder = [
+    [pygame.rect.Rect(608, 480, 64, 64), "soldier"],
+    [pygame.rect.Rect(736, 480, 64, 64), "mage"],
+    [pygame.rect.Rect(480, 480, 64, 64), "alien"],
 ]
 
+ready_holder = pygame.rect.Rect(480, 672, 320, 64)
+
+client_id = client.send(["initialize", character_choice, team])
+
+if client_id is None:
+    print("Failed to receive initial id")
+    sys.exit()
+
+
+screen = pygame.display.set_mode((1280, 800))
+clock = pygame.time.Clock()
+in_lobby = True
+
+#-----------------------------------------------------------------------------------------------------------------------
 # LOBBY
 while in_lobby:
 
@@ -54,27 +67,31 @@ while in_lobby:
             in_game = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                for spawning_zone in start_zone:
+                for spawning_zone in team_holder:
                     if spawning_zone[0].collidepoint(pygame.mouse.get_pos()):
                         team = spawning_zone[1]
-                for character in character_zone:
+                for character in character_holder:
                     if character[0].collidepoint(pygame.mouse.get_pos()):
                         character_choice = character[1]
+                if ready_holder.collidepoint(pygame.mouse.get_pos()):
+                    in_lobby = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 in_lobby = False
 
     clock.tick(60)
 
-    screen.blit(game_map, (0, 0))
+    screen.blit(lobby, (0, 0))
 
-    for spawning_zone in start_zone:
+    pygame.draw.rect(screen, (0, 0, 0), ready_holder, 1)
+
+    for spawning_zone in team_holder:
         if spawning_zone[1] == team:
             pygame.draw.rect(screen, "green", spawning_zone[0], 2)
         else:
             pygame.draw.rect(screen, "blue", spawning_zone[0], 2)
 
-    for character in character_zone:
+    for character in character_holder:
         if character[1] == character_choice:
             pygame.draw.rect(screen, "green", character[0], 2)
         else:
@@ -88,19 +105,18 @@ while in_lobby:
                 _image = alien
             case _:
                 _image = default_player
-        screen.blit(_image, (character[0].x, character[0].y))
+        new_width = _image.get_width() * 2
+        new_height = _image.get_height() * 2
+        new_size = (new_width, new_height)
+        scaled_image = pygame.transform.scale(_image, new_size)
+        screen.blit(scaled_image, (character[0].x, character[0].y))
 
     pygame.display.flip()
 
+#-----------------------------------------------------------------------------------------------------------------------
 #PRE-GAME
 
-client_id = client.send(["initialize", character_choice, team])
-
-if client_id is None:
-    print("Failed to receive initial id")
-    sys.exit()
-
-player = Player(client_id, [start_zone[team-1][0].x, start_zone[team-1][0].y])
+player = Player(client_id, [team_holder[team - 1][0].x, team_holder[team - 1][0].y])
 
 if player is None:
     print("Failed to create player object")
@@ -214,14 +230,13 @@ all_active_player = []
 #dict={"_id": [x, y]}
 all_player_location = {}
 
-#dict={"_id": "character_name"}
-all_player_character = {}
-
 #dict={"_id":[ Projectile(), Projectile()]}
 all_player_projectile = {}
 
 #dict={"_id": int health}
 all_player_health = {}
+
+all_player_character = client.send(["all player character", player.id])
 
 #Older version
 projectile_list = []
@@ -245,12 +260,13 @@ win_condition = 100
 
 show_grid = False
 
-all_player_character = client.send(["all player character", player.id])
+
 
 in_game = True
 dt = 0
 
-
+#-----------------------------------------------------------------------------------------------------------------------
+#GAME
 
 while in_game:
 
@@ -400,9 +416,6 @@ while in_game:
     # flip() the display to put your work on screen
     pygame.display.flip()
 
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
     dt = clock.tick(60) / 1000
 
 while in_winner_screen:
@@ -417,9 +430,9 @@ while in_winner_screen:
     screen.blit(game_map, (0, 0))
 
     if winner == "1":
-        pygame.draw.rect(screen, "green", start_zone[0][0])
+        pygame.draw.rect(screen, "green", team_holder[0][0])
     elif winner == "2":
-        pygame.draw.rect(screen, "green", start_zone[1][0])
+        pygame.draw.rect(screen, "green", team_holder[1][0])
 
     pygame.display.flip()
 

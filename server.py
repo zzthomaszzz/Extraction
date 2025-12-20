@@ -17,6 +17,8 @@ all_player_health = {}
 
 team_progress = {"1": 0, "2": 0}
 
+GAME_START = False
+
 #Team Data
 
 def handle_client(client, address, _id):
@@ -109,10 +111,12 @@ def start_server():
 
     print(f"Server listening on {host}:{port}")
     while True:
-        if len(current_players) < 6:
-            client_id = random.randint(100, 200)
-            if client_id in current_players:
-                continue
+        if len(current_players) < 6 and not GAME_START:
+            available_id = [1, 2, 3, 4, 5, 6]
+            for _id in available_id:
+                if _id in current_players:
+                    available_id.remove(_id)
+            client_id = random.choice(available_id)
             client_socket, addr = server_socket.accept()
             client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
             client_thread.daemon = True
