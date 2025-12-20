@@ -16,17 +16,19 @@ all_player_projectile = {}
 all_player_health = {}
 
 team_progress = {"1": 0, "2": 0}
+
+ready_status = {}
 team_1 = []
 team_2 = []
 
 GAME_START = False
-
 #Team Data
 
 def handle_client(client, address, _id):
     print(f"Accepted connection from {address}, id: {_id}")
     #
     current_players.append(_id)
+    ready_status[_id] = False
 
     # Run once data goes here
     initialize_data = client.recv(2048)
@@ -62,6 +64,8 @@ def remove(_id):
         team_1.remove(_id)
     if _id in team_2:
         team_2.remove(_id)
+    if _id in ready_status:
+        del ready_status[_id]
 
 def process_data(data, _id):
     match data[0]:
@@ -87,11 +91,11 @@ def process_data(data, _id):
             all_player_character[_id] = data[1]
         case "team choice":
             choice = data[1]
-            if choice == 1 and _id not in team_1:
+            if choice == 1 and _id not in team_1 and len(team_1) < 3:
                 team_1.append(_id)
                 if _id in team_2:
                     team_2.remove(_id)
-            if choice == 2 and _id not in team_2:
+            if choice == 2 and _id not in team_2 and len(team_2) < 3:
                 team_2.append(_id)
                 if _id in team_1:
                     team_1.remove(_id)
@@ -99,6 +103,18 @@ def process_data(data, _id):
             return team_1
         case "team 2":
             return team_2
+        case "ready":
+            ready_status[_id] = True
+            global GAME_START
+            GAME_START = True
+            for player in current_players:
+                if player in ready_status:
+                    if not ready_status[player]:
+                        GAME_START = False
+        case "ready status":
+            return ready_status
+        case "game start":
+            return GAME_START
         case "initialize":
             return _id
         case "all location":

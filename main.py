@@ -7,6 +7,7 @@ from client import Client
 from mapSystem import MapSystem
 from player import *
 from projectile import Projectile
+from server import ready_status
 
 host = "127.0.0.1"
 port = 5000
@@ -22,20 +23,20 @@ except ConnectionRefusedError as e:
 def to_color(number):
     match number:
         case 1:
-            color = (255, 0, 0)
+            _color = (255, 0, 0)
         case 2:
-            color = (0, 255, 0)
+            _color = (0, 255, 0)
         case 3:
-            color = (0, 0, 255)
+            _color = (0, 0, 255)
         case 4:
-            color = (255, 255, 255)
+            _color = (255, 255, 255)
         case 5:
-            color = (0, 255, 255)
+            _color = (0, 255, 255)
         case 6:
-            color = (255, 255, 0)
+            _color = (255, 255, 0)
         case _:
-            color = (0, 0, 0)
-    return color
+            _color = (0, 0, 0)
+    return _color
 
 
 pygame.init()
@@ -66,15 +67,30 @@ character_holder = [
 ready_holder = pygame.rect.Rect(480, 672, 320, 64)
 color_holder = pygame.rect.Rect(576, 384, 128, 8)
 
+###
 team_1_holder = [
     pygame.rect.Rect(64, 64, 64, 64),
     pygame.rect.Rect(64, 192, 64, 64),
     pygame.rect.Rect(64, 320, 64, 64)
 ]
+
+team_1_ready_holder = [
+    pygame.rect.Rect(160, 96, 32, 32),
+    pygame.rect.Rect(160, 224, 32, 32),
+    pygame.rect.Rect(160, 352, 32, 32)
+]
+
+###
 team_2_holder = [
     pygame.rect.Rect(1152, 64, 64, 64),
     pygame.rect.Rect(1152, 192, 64, 64),
     pygame.rect.Rect(1152, 320, 64, 64)
+]
+
+team_2_ready_holder = [
+    pygame.rect.Rect(1088, 96, 32, 32),
+    pygame.rect.Rect(1088, 224, 32, 32),
+    pygame.rect.Rect(1088, 352, 32, 32)
 ]
 
 client_id = client.get(["initialize"])
@@ -93,29 +109,37 @@ in_lobby = True
 # LOBBY
 while in_lobby:
 
+    team_1 = client.get(["team 1"])
+    team_2 = client.get(["team 2"])
+
+    characters = client.get(["all player character"])
+
+    ready = client.get(["ready status"])
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                for spawning_zone in team_holder:
-                    if spawning_zone[0].collidepoint(pygame.mouse.get_pos()):
-                        team_choice = spawning_zone[1]
-                        client.send(["team choice", team_choice])
-                for character in character_holder:
-                    if character[0].collidepoint(pygame.mouse.get_pos()):
-                        character_choice = character[1]
-                        client.send(["character choice", character_choice])
-                if ready_holder.collidepoint(pygame.mouse.get_pos()):
-                    in_lobby = False
+                if client_id in ready:
+                    if not ready[client_id]:
+                        for spawning_zone in team_holder:
+                            if spawning_zone[0].collidepoint(pygame.mouse.get_pos()):
+                                team_choice = spawning_zone[1]
+                                client.send(["team choice", team_choice])
+                        for character in character_holder:
+                            if character[0].collidepoint(pygame.mouse.get_pos()):
+                                character_choice = character[1]
+                                client.send(["character choice", character_choice])
+                        if ready_holder.collidepoint(pygame.mouse.get_pos()):
+                            if character_choice is not None and team_choice is not None:
+                                client.send(["ready"])
 
-    team_1 = client.get(["team 1"])
-    team_2 = client.get(["team 2"])
-
-    characters = client.get(["all player character"])
-
-    clock.tick(32)
+    start = client.get(["game start"])
+    if start:
+        in_lobby = False
+    clock.tick(10)
 
     screen.blit(lobby, (0, 0))
 
@@ -141,6 +165,10 @@ while in_lobby:
             new_size = (new_width, new_height)
             scaled_image = pygame.transform.scale(_image, new_size)
             screen.blit(scaled_image, (team_1_holder[count].x, team_1_holder[count].y))
+
+        if player in ready:
+            if ready[player]:
+                pygame.draw.rect(screen, "green", team_1_ready_holder[count])
         count += 1
 
     count = 0
@@ -164,6 +192,10 @@ while in_lobby:
             new_size = (new_width, new_height)
             scaled_image = pygame.transform.scale(_image, new_size)
             screen.blit(scaled_image, (team_2_holder[count].x, team_2_holder[count].y))
+
+        if player in ready:
+            if ready[player]:
+                pygame.draw.rect(screen, "green", team_2_ready_holder[count])
         count += 1
 
     for holder in team_holder:
