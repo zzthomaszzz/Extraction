@@ -453,6 +453,10 @@ while in_game:
         proj.update(dt)
         if proj.rect.collidelist(obstacles) != -1:
             client_projectile.remove(proj)
+        if proj.rect.x < 0 or proj.rect.x + proj.rect.width > 1280:
+            client_projectile.remove(proj)
+        if proj.rect.y < 0 or proj.rect.y + proj.rect.height > 800:
+            client_projectile.remove(proj)
 
     packet = {
         "x": player.rect.x,
