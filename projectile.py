@@ -1,51 +1,32 @@
+import math
+
 import pygame
 
 class Projectile:
 
-    def __init__(self, x, y, size = 5):
-        self.size = size
-        self.rect = pygame.rect.Rect(0, 0, self.size, self.size)
+    def __init__(self, x, y, size, _type):
+        self.rect = pygame.rect.Rect(0, 0, size, size)
+        self.type = _type
         self.rect.center = (x, y)
 
 class Bullet(Projectile):
 
-    def __init__(self, x, y, direction, size=5):
-        super().__init__(x, y, size)
+    def __init__(self, x, y, destination):
+        super().__init__(x, y, 5, "damage")
+        self.direction = [0.0,0.0]
         self.speed = 600
-        self.direction = direction
+        self.damage = 10
+        self.set_direction(destination)
+
+    def set_direction(self, target_destination):
+        x_axis = target_destination[0] - self.rect.centerx
+        y_axis = target_destination[1] - self.rect.centery
+        angle = math.atan2(y_axis, x_axis)
+        direction_y = round(math.sin(angle), 2)
+        direction_x = round(math.cos(angle), 2)
+        self.direction[0] = direction_x
+        self.direction[1] = direction_y
 
     def update(self, dt):
         self.rect.x += self.direction[0] * self.speed * dt
         self.rect.y += self.direction[1] * self.speed * dt
-
-class FireBall(Projectile):
-
-    def __init__(self, x, y, index, size=5):
-        super().__init__(x, y, size)
-        self.speed = 500
-        self.direction = [0, 0]
-        self.orbit = True
-        self.index = index
-
-    def update(self, dt):
-        if not self.orbit:
-            self.rect.x += self.direction[0] * self.speed * dt
-            self.rect.y += self.direction[1] * self.speed * dt
-
-    def fire(self, direction):
-        self.direction = direction
-        self.orbit = False
-
-
-class Claw(Projectile):
-    def __init__(self, x, y, size=60):
-        super().__init__(x, y, size)
-        self.linger_time = 0.2
-        self.counter = 0
-        self.kill = False
-
-    def update(self, dt):
-        if not self.kill:
-            self.counter += dt
-        if self.counter > self.linger_time:
-            self.kill = True

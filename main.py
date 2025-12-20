@@ -6,7 +6,7 @@ import sys
 from client import Client
 from mapSystem import MapSystem
 from player import *
-from projectile import Projectile
+from projectile import Projectile, Bullet
 
 host = "127.0.0.1"
 port = 5000
@@ -138,9 +138,25 @@ while in_lobby:
     start = client.get(["game start"])
     if start:
         in_lobby = False
-    clock.tick(10)
+    clock.tick(30)
 
     screen.blit(lobby, (0, 0))
+
+    if character_choice is not None:
+        match character_choice:
+            case "soldier":
+                _image = soldier
+            case "mage":
+                _image = mage
+            case "alien":
+                _image = alien
+            case _:
+                _image = default_player
+        new_width = _image.get_width() * 4
+        new_height = _image.get_height() * 4
+        new_size = (new_width, new_height)
+        scaled_image = pygame.transform.scale(_image, new_size)
+        screen.blit(scaled_image, (color_holder.x, color_holder.y - 128))
 
     pygame.draw.rect(screen, client_color, color_holder)
 
@@ -297,27 +313,23 @@ if team_choice is None or character_choice is None:
     print("Couldn't create player object")
     pygame.quit()
     sys.exit()
-player = Player(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
 
 match character_choice:
     case "mage":
         player_image = mage
+        player = Mage(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
     case "soldier":
         player_image = soldier
+        player = Soldier(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
     case "alien":
         player_image = alien
+        player = Alien(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
     case _:
         player_image = default_player
+        player = Player(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
 
+projectile = Bullet
 client_projectile = []
-first_packet = {
-    "x": player.rect.x,
-    "y": player.rect.y,
-    "hp" : player.current_health,
-    "proj": client_projectile
-}
-
-server_data = {}
 
 map_system = MapSystem(1280, 800, obstacles, spawn_zone)
 
@@ -361,8 +373,10 @@ def adjust_vertical(_player, _obstacle_list):
 #Where the server data will come through
 
 current_players = client.get(["all active player", player.id])
+print(current_players)
 
 player_characters = client.get(["all player character", player.id])
+print(player_characters)
 
 point = 0
 
@@ -402,10 +416,8 @@ while in_game:
             in_game = False
             in_winner_screen = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and not player.isDead:
-                player.basic_attack(pygame.mouse.get_pos())
-            if event.button == 3 and not player.isDead:
-                player.alternate_attack(pygame.mouse.get_pos())
+            if event.button == 1:
+                client_projectile.append(projectile(player.rect.x, player.rect.y, pygame.mouse.get_pos()))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_t:
                 if show_grid:
@@ -437,7 +449,10 @@ while in_game:
 
     handle_player(player)
 
-    player.handle_projectile(obstacles, dt)
+    for proj in client_projectile:
+        proj.update(dt)
+        if proj.rect.collidelist(obstacles) != -1:
+            client_projectile.remove(proj)
 
     packet = {
         "x": player.rect.x,
@@ -447,7 +462,6 @@ while in_game:
     }
 
     server_packet = client.get(["packet",packet])
-    print(server_packet)
 
     map_system.handle_fog(map_system.getEntityNode(player), player.vision)
     # fill the screen with a color to wipe away anything from last frame
@@ -457,7 +471,7 @@ while in_game:
     #Note that the main player character will not be covered by fog
     for entity in current_players:
         if entity is not client_id:
-            if entity in player_characters and entity in server_data:
+            if entity in player_characters and entity in server_packet:
                 match player_characters[entity]:
                     case "mage":
                         _image = mage
@@ -467,11 +481,21 @@ while in_game:
                         _image = alien
                     case _:
                         _image = default_player
-                x = server_data[entity]["x"]
-                y = server_data[entity]["y"]
+                x = server_packet[entity]["x"]
+                y = server_packet[entity]["y"]
                 screen.blit(_image, (x,y))
 
     screen.blit(player_image, (player.rect.x, player.rect.y))
+
+    for entity in current_players:
+        if entity is not client_id:
+            if entity in server_packet:
+                for proj in server_packet[entity]["proj"]:
+                    pygame.draw.rect(screen, "red", proj.rect)
+
+
+    for proj in client_projectile:
+        pygame.draw.rect(screen, "green", proj.rect)
 
     #Drawing fog of war
     map_system.draw()
