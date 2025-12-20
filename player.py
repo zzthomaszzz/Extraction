@@ -15,12 +15,10 @@ def rotate_point(point, center_point, angle):
 
 class Player:
 
-    def __init__(self, _id, location, color = (0, 0, 0)):
+    def __init__(self, _id, location):
         self.rect = pygame.rect.Rect(location[0], location[1], 32, 32)
         self.name = "default"
-        self.color = color
         self.left, self.right, self.up, self.down = 0, 0, 0, 0
-        self.image_path = "asset/default_player.png"
         self.id = _id
 
         #Projectile data

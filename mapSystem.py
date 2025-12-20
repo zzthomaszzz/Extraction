@@ -20,7 +20,6 @@ class MapSystem:
         self.initNode()
         self.setObstacles()
         self.setSpawn()
-        self.previous_player_pos = []
 
     def initNode(self):
         y = 0
@@ -50,9 +49,6 @@ class MapSystem:
                 if node.rect.collidelist(self.obstacles) >= 0:
                     node.traversable = 0
                     self.non_traversable_nodes.append(node)
-
-    def set_player_pos(self, player_pos):
-        self.previous_player_pos = player_pos
 
     def get_adjacent(self, node):
         adj_node = []

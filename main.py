@@ -7,7 +7,6 @@ from client import Client
 from mapSystem import MapSystem
 from player import *
 from projectile import Projectile
-from server import ready_status
 
 host = "127.0.0.1"
 port = 5000
@@ -144,6 +143,7 @@ while in_lobby:
     screen.blit(lobby, (0, 0))
 
     pygame.draw.rect(screen, client_color, color_holder)
+
     count = 0
     for player in team_1:
         color = to_color(player)
@@ -228,12 +228,12 @@ while in_lobby:
 
 #-----------------------------------------------------------------------------------------------------------------------
 #PRE-GAME
-
-player = Player(client_id, [team_holder[team_choice - 1][0].x, team_holder[team_choice - 1][0].y])
-
-if player is None:
-    print("Failed to create player object")
-    sys.exit()
+del ready_holder
+del color_holder
+del team_1_holder
+del team_1_ready_holder
+del team_2_holder
+del team_2_ready_holder
 
 capture_zone = pygame.rect.Rect(512, 320, 255, 127)
 
@@ -293,10 +293,33 @@ spawn_zone = [
 
 teammate_data = {}
 
-team_progress = {"1": 0, "2": 0}
+if team_choice is None or character_choice is None:
+    print("Couldn't create player object")
+    pygame.quit()
+    sys.exit()
+player = Player(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
+
+match character_choice:
+    case "mage":
+        player_image = mage
+    case "soldier":
+        player_image = soldier
+    case "alien":
+        player_image = alien
+    case _:
+        player_image = default_player
+
+client_projectile = []
+first_packet = {
+    "x": player.rect.x,
+    "y": player.rect.y,
+    "hp" : player.current_health,
+    "proj": client_projectile
+}
+
+server_data = {}
 
 map_system = MapSystem(1280, 800, obstacles, spawn_zone)
-map_system.set_player_pos([player.rect.centerx, player.rect.centery])
 
 def handle_player(_player):
     _player.rect.x += (_player.right - _player.left) * _player.speed * dt
@@ -337,25 +360,9 @@ def adjust_vertical(_player, _obstacle_list):
 #Global Data
 #Where the server data will come through
 
-#list=[_id, _id, _id], We will need this to iterate through dictionaries
-all_active_player = []
+current_players = client.get(["all active player", player.id])
 
-#dict={"_id": [x, y]}
-all_player_location = {}
-
-#dict={"_id":[ Projectile(), Projectile()]}
-all_player_projectile = {}
-
-#dict={"_id": int health}
-all_player_health = {}
-
-all_player_character = client.get(["all player character", player.id])
-
-#Older version
-projectile_list = []
-
-refresh_rate = 0.25
-refresh_counter = 0
+player_characters = client.get(["all player character", player.id])
 
 point = 0
 
@@ -372,8 +379,6 @@ spawn_bar = {"1": [0,0], "2": [1184, 704]}
 win_condition = 100
 
 show_grid = False
-
-
 
 in_game = True
 dt = 0
@@ -416,8 +421,8 @@ while in_game:
             if event.key == pygame.K_w:
                 player.up = 1
             if event.key == pygame.K_ESCAPE:
-                in_game = False
-                in_winner_screen = False
+                pygame.quit()
+                sys.exit()
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_a:
                 player.left = 0
@@ -428,93 +433,48 @@ while in_game:
             if event.key == pygame.K_w:
                 player.up = 0
 
-    #Resolving Server Data
-
-    # This will return [_id, _id, _id]
-    all_active_player = client.get(["all active player", player.id])
-
-    # This will return {"_id":[[x, y], team_choice], "_id":[[x, y], team_choice]}
-    all_player_location = client.get(["all location", [player.rect.x, player.rect.y], team_choice])
-
-    #This will return {"_id": [[projectile.rect, projectile.rect], player.damage]}
-    all_player_projectile = client.get(["all player projectile", player.get_projectile_data(), player.damage])
-
-    #This will return {"_id": [current_health, max_health]}
-    all_player_health = client.get(["all player health", [player.current_health, player.max_health]])
-
-    #This return team_choice progress for capture the flag
-    team_progress = client.get(["team_choice progress", player.id])
-
-    if team_progress == "1" or team_progress == "2" or team_progress == "3" or team_progress == "4":
-        winner = team_progress
-        break
-
-    #Client update
     player.update(dt)
 
     handle_player(player)
 
     player.handle_projectile(obstacles, dt)
 
-    refresh_counter += dt
-    if refresh_counter > refresh_rate:
-        map_system.handle_fog(map_system.getEntityNode(player), player.vision)
-        refresh_counter = 0
+    packet = {
+        "x": player.rect.x,
+        "y": player.rect.y,
+        "hp": player.current_health,
+        "proj": client_projectile
+    }
 
-    for _node in heal_zone:
-        if player.rect.colliderect(_node):
-            player.heal(50 * dt)
+    server_packet = client.get(["packet",packet])
+    print(server_packet)
 
-
-    if player.rect.colliderect(capture_zone):
-        point += dt
-    if point > 1:
-        client.send(["capture", str(team_choice)])
-        point = 0
-
+    map_system.handle_fog(map_system.getEntityNode(player), player.vision)
     # fill the screen with a color to wipe away anything from last frame
     screen.blit(game_map, (0, 0))
 
     #Drawing all players and their health bars
     #Note that the main player character will not be covered by fog
-    for entity in all_active_player:
-        if entity in all_player_character and entity in all_player_location and entity in all_player_health:
-            match all_player_character[entity]:
-                case "mage":
-                    _image = mage
-                case "soldier":
-                    _image = soldier
-                case "alien":
-                    _image = alien
-                case _:
-                    _image = default_player
-            screen.blit(_image, all_player_location[entity][0])
+    for entity in current_players:
+        if entity is not client_id:
+            if entity in player_characters and entity in server_data:
+                match player_characters[entity]:
+                    case "mage":
+                        _image = mage
+                    case "soldier":
+                        _image = soldier
+                    case "alien":
+                        _image = alien
+                    case _:
+                        _image = default_player
+                x = server_data[entity]["x"]
+                y = server_data[entity]["y"]
+                screen.blit(_image, (x,y))
 
-            max_hp_rect = pygame.rect.Rect(all_player_location[entity][0][0], all_player_location[entity][0][1] - 10, 32, 5)
-            current_hp_bar = (all_player_health[entity][0] / all_player_health[entity][1]) * 32
-            current_hp_rect = pygame.rect.Rect(all_player_location[entity][0][0], all_player_location[entity][0][1] - 10, current_hp_bar, 5)
-            pygame.draw.rect(pygame.display.get_surface(), "black", max_hp_rect)
-            if all_player_location[entity][1] == team_choice:
-                pygame.draw.rect(pygame.display.get_surface(), "green", current_hp_rect)
-            else:
-                pygame.draw.rect(pygame.display.get_surface(), "red", current_hp_rect)
-
-    #Drawing all projectile
-    for entity in all_active_player:
-        if entity in all_player_projectile and entity in all_player_location:
-            for _proj in all_player_projectile[entity][0]:
-                pygame.draw.rect(screen, "red", _proj, 1)
+    screen.blit(player_image, (player.rect.x, player.rect.y))
 
     #Drawing fog of war
     map_system.draw()
-
-    #Drawing progress bar
-    for key in team_progress:
-        progress_bar = pygame.rect.Rect(spawn_bar[key][0], spawn_bar[key][1], 95, 5)
-        current_progress = (team_progress[key] / win_condition) * 95
-        current_progress_bar = pygame.rect.Rect(spawn_bar[key][0], spawn_bar[key][1], current_progress, 5)
-        pygame.draw.rect(screen, "black", progress_bar)
-        pygame.draw.rect(screen, "purple", current_progress_bar)
 
     #Test Drawing
     if show_grid:
@@ -529,7 +489,7 @@ while in_game:
     # flip() the display to put your work on screen
     pygame.display.flip()
 
-    dt = clock.tick(60) / 1000
+    dt = clock.tick(30) / 1000
 
 while in_winner_screen:
 
@@ -541,12 +501,6 @@ while in_winner_screen:
                 in_winner_screen = False
 
     screen.blit(game_map, (0, 0))
-
-    if winner == "1":
-        pygame.draw.rect(screen, "green", team_holder[0][0])
-    elif winner == "2":
-        pygame.draw.rect(screen, "green", team_holder[1][0])
-
     pygame.display.flip()
 
 pygame.quit()

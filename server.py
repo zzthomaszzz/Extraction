@@ -2,18 +2,31 @@ import socket
 import threading
 import pickle
 import random
+import time
 from time import sleep
+from pygame import time
 
 from player import *
 
 MAX_PLAYER = 6
 
 #Client data
+
+#Contains ID only
 current_players = []
+
+#Contains ID:Character name in string
+player_characters = {}
+
+
 all_player_location = {}
-all_player_character = {}
+
 all_player_projectile = {}
+
 all_player_health = {}
+
+
+data_packet = {}
 
 team_progress = {"1": 0, "2": 0}
 
@@ -22,6 +35,7 @@ team_1 = []
 team_2 = []
 
 GAME_START = False
+SERVER_TICK = 0
 #Team Data
 
 def handle_client(client, address, _id):
@@ -52,8 +66,8 @@ def handle_client(client, address, _id):
 
 def remove(_id):
     current_players.remove(_id)
-    if _id in all_player_character:
-        del all_player_character[_id]
+    if _id in player_characters:
+        del player_characters[_id]
     if _id in all_player_location:
         del all_player_location[_id]
     if _id in all_player_health:
@@ -69,6 +83,9 @@ def remove(_id):
 
 def process_data(data, _id):
     match data[0]:
+        case "packet":
+            data_packet[_id] = data[1]
+            return data_packet
         case "capture":
             team_progress[data[1]] += 1
             return None
@@ -86,9 +103,9 @@ def process_data(data, _id):
         case "all active player":
             return current_players
         case "all player character":
-            return all_player_character
+            return player_characters
         case "character choice":
-            all_player_character[_id] = data[1]
+            player_characters[_id] = data[1]
         case "team choice":
             choice = data[1]
             if choice == 1 and _id not in team_1 and len(team_1) < 3:
@@ -129,22 +146,30 @@ def start_server():
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((host, port))
-    server_socket.listen(1)
+    server_socket.listen(5)
+    server_socket.settimeout(10)
 
     print(f"Server listening on {host}:{port}")
-    while True:
-        if len(current_players) < 6 and not GAME_START:
+    while not GAME_START:
+        if len(current_players) < 6:
             available_id = [1, 2, 3, 4, 5, 6]
             for _id in available_id:
                 if _id in current_players:
                     available_id.remove(_id)
             client_id = random.choice(available_id)
-            client_socket, addr = server_socket.accept()
+            try:
+                client_socket, addr = server_socket.accept()
+            except socket.timeout:
+                continue
             client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
-            client_thread.daemon = True
             client_thread.start()
         else:
             sleep(1)
+    server_socket.close()
+    print("Server stopped listening for connection")
+
 
 if __name__ == "__main__":
     start_server()
+
+
