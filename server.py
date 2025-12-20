@@ -16,6 +16,8 @@ all_player_projectile = {}
 all_player_health = {}
 
 team_progress = {"1": 0, "2": 0}
+team_1 = []
+team_2 = []
 
 GAME_START = False
 
@@ -56,13 +58,17 @@ def remove(_id):
         del all_player_health[_id]
     if _id in all_player_projectile:
         del all_player_projectile[_id]
+    if _id in team_1:
+        team_1.remove(_id)
+    if _id in team_2:
+        team_2.remove(_id)
 
 def process_data(data, _id):
     match data[0]:
         case "capture":
             team_progress[data[1]] += 1
             return None
-        case "team progress":
+        case "team_choice progress":
             for key in team_progress:
                 if team_progress[key] > 100:
                     return key
@@ -77,23 +83,23 @@ def process_data(data, _id):
             return current_players
         case "all player character":
             return all_player_character
+        case "character choice":
+            all_player_character[_id] = data[1]
+        case "team choice":
+            choice = data[1]
+            if choice == 1 and _id not in team_1:
+                team_1.append(_id)
+                if _id in team_2:
+                    team_2.remove(_id)
+            if choice == 2 and _id not in team_2:
+                team_2.append(_id)
+                if _id in team_1:
+                    team_1.remove(_id)
+        case "team 1":
+            return team_1
+        case "team 2":
+            return team_2
         case "initialize":
-            match data[2]:
-                case 1:
-                    all_player_location[_id] = [0,0]
-                case 2:
-                    all_player_location[_id] = [1247, 767]
-                case _:
-                    all_player_location[_id] = [0, 0]
-            match data[1]:
-                case "mage":
-                    all_player_character[_id] = "mage"
-                case "soldier":
-                    all_player_character[_id] = "soldier"
-                case "alien":
-                    all_player_character[_id] = "alien"
-                case _:
-                    all_player_character[_id] = "default"
             return _id
         case "all location":
             all_player_location[_id] = [data[1], data[2]]
