@@ -494,9 +494,7 @@ while in_game:
                 else:
                     if proj.kill:
                         client_projectile.remove(proj)
-        if proj.rect.x < 0 or proj.rect.x + proj.rect.width > 1280:
-            client_projectile.remove(proj)
-        if proj.rect.y < 0 or proj.rect.y + proj.rect.height > 800:
+        elif proj.rect.x < 0 or proj.rect.x + proj.rect.width > 1280 or proj.rect.y < 0 or proj.rect.y + proj.rect.height > 800:
             client_projectile.remove(proj)
 
     map_system.handle_fog(map_system.getEntityNode(player), player.vision)
@@ -520,18 +518,17 @@ while in_game:
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
                 screen.blit(_image, (x,y))
-            current_hp = server_packet[entity]["hp"] * 32
-            current_hp_rect = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 10, current_hp, 5)
-            if isEnemy(entity):
-                pygame.draw.rect(screen, "red", current_hp_rect)
-            else:
-                pygame.draw.rect(screen, "green", current_hp_rect)
+                current_hp = server_packet[entity]["hp"] * 32
+                current_hp_rect = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 10, current_hp, 5)
+                if isEnemy(entity):
+                    pygame.draw.rect(screen, "red", current_hp_rect)
+                else:
+                    pygame.draw.rect(screen, "green", current_hp_rect)
 
     screen.blit(player_image, (player.rect.x, player.rect.y))
     current_hp = get_hp_percent() * 32
     current_hp_rect = pygame.rect.Rect(player.rect.x, player.rect.y - 10, current_hp, 5)
     pygame.draw.rect(screen, "green", current_hp_rect)
-
 
     for entity in current_players:
         if entity is not client_id:
