@@ -395,7 +395,7 @@ show_grid = False
 in_game = True
 dt = 0
 
-def isEnemyProj(_id):
+def isEnemy(_id):
     if team_choice == 1:
         if _id in team_2:
             return True
@@ -406,11 +406,13 @@ def isEnemyProj(_id):
 
 def get_projectiles(_packet):
     data = []
-    for item in _packet:
-        if item != client_id:
-            for _proj in item["proj"]:
-                data.append(_proj)
+    for key, value in _packet.items():
+        for _proj in value["proj"]:
+            data.append(_proj)
     return data
+
+def get_hp_percent():
+    return player.current_health / player.max_health
 
 #-----------------------------------------------------------------------------------------------------------------------
 #GAME
@@ -420,7 +422,7 @@ while in_game:
     packet = {
         "x": player.rect.x,
         "y": player.rect.y,
-        "hp": player.current_health,
+        "hp": get_hp_percent(),
         "proj": client_projectile
     }
 
@@ -434,7 +436,7 @@ while in_game:
             if proj.type == "slow":
                 speed_mod = proj.type_value
             if proj.type == "damage":
-                if isEnemyProj(proj.id):
+                if isEnemy(proj.id) and not player.isInvincible:
                     player.current_health -= proj.type_value
                     player.isInvincible = True
                     print(f"Player took damage, current health is now {player.current_health}")
@@ -518,13 +520,25 @@ while in_game:
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
                 screen.blit(_image, (x,y))
+            current_hp = server_packet[entity]["hp"] * 32
+            current_hp_rect = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 10, current_hp, 5)
+            if isEnemy(entity):
+                pygame.draw.rect(screen, "red", current_hp_rect)
+            else:
+                pygame.draw.rect(screen, "green", current_hp_rect)
 
     screen.blit(player_image, (player.rect.x, player.rect.y))
+    current_hp = get_hp_percent() * 32
+    current_hp_rect = pygame.rect.Rect(player.rect.x, player.rect.y - 10, current_hp, 5)
+    pygame.draw.rect(screen, "green", current_hp_rect)
+
 
     for entity in current_players:
         if entity is not client_id:
             if entity in server_packet:
                 for proj in server_packet[entity]["proj"]:
+                    if isEnemy(entity):
+                        proj.set_color(True)
                     proj.draw()
 
 
