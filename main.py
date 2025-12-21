@@ -6,7 +6,7 @@ import sys
 from client import Client
 from mapSystem import MapSystem
 from player import *
-from projectile import Projectile, Bullet
+from projectile import *
 
 host = "127.0.0.1"
 port = 5000
@@ -307,8 +307,6 @@ spawn_zone = [
     pygame.rect.Rect(1184, 704, 96, 96),
 ]
 
-teammate_data = {}
-
 if team_choice is None or character_choice is None:
     print("Couldn't create player object")
     pygame.quit()
@@ -328,20 +326,24 @@ match character_choice:
         player_image = default_player
         player = Player(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
 
-projectile = Bullet
+team_1 = client.get(["team 1"])
+team_2 = client.get(["team 2"])
+
+primary = Bullet
+secondary = SlowZone
 client_projectile = []
 
 map_system = MapSystem(1280, 800, obstacles, spawn_zone)
 
-def handle_player(_player):
-    _player.rect.x += (_player.right - _player.left) * _player.speed * dt
+def handle_player(_player, modify):
+    _player.rect.x += (_player.right - _player.left) * (_player.speed * modify) * dt
     if _player.rect.x < 0:
         _player.rect.x = 0
     if _player.rect.x + 32 > 1280:
         _player.rect.x = 1280 - 32
     adjust_horizontal(_player, map_system.obstacles)
 
-    _player.rect.y += (_player.down - _player.up) * _player.speed * dt
+    _player.rect.y += (_player.down - _player.up) * (_player.speed * modify) * dt
     if _player.rect.y < 0:
         _player.rect.y = 0
     if _player.rect.y + 32 > 800:
@@ -386,10 +388,6 @@ in_winner_screen = True
 dead_timer = 5
 dead_counter = 0
 
-spawn = {"1": [0,0], "2": [1247, 767]}
-
-spawn_bar = {"1": [0,0], "2": [1184, 704]}
-
 win_condition = 100
 
 show_grid = False
@@ -397,27 +395,60 @@ show_grid = False
 in_game = True
 dt = 0
 
+def isEnemyProj(_id):
+    if team_choice == 1:
+        if _id in team_2:
+            return True
+    if team_choice == 2:
+        if _id in team_1:
+            return True
+    return False
+
+def get_projectiles(_packet):
+    data = []
+    for item in _packet:
+        if item != client_id:
+            for _proj in item["proj"]:
+                data.append(_proj)
+    return data
+
 #-----------------------------------------------------------------------------------------------------------------------
 #GAME
 
 while in_game:
 
-    if player.isDead:
-        player.rect.x, player.rect.y = spawn[str(team_choice)][0], spawn[str(team_choice)][1]
-        dead_counter += dt
-        if dead_counter > dead_timer:
-            player.isDead = False
-            player.current_health = player.max_health
-            dead_counter = 0
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
+    packet = {
+        "x": player.rect.x,
+        "y": player.rect.y,
+        "hp": player.current_health,
+        "proj": client_projectile
+    }
+
+    server_packet = client.get(["packet", packet])
+    server_projectile = get_projectiles(server_packet)
+
+
+    speed_mod = 1
+    for proj in server_projectile:
+        if proj.rect.colliderect(player.rect):
+            if proj.type == "slow":
+                speed_mod = proj.type_value
+            if proj.type == "damage":
+                if isEnemyProj(proj.id):
+                    player.current_health -= proj.type_value
+                    player.isInvincible = True
+                    print(f"Player took damage, current health is now {player.current_health}")
+
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             in_game = False
             in_winner_screen = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                client_projectile.append(projectile(player.rect.x, player.rect.y, pygame.mouse.get_pos()))
+                client_projectile.append(primary(player.rect.x, player.rect.y, pygame.mouse.get_pos(), client_id))
+            if event.button == 3:
+                client_projectile.append(secondary(player.rect.x, player.rect.y, pygame.mouse.get_pos(), client_id))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_t:
                 if show_grid:
@@ -447,25 +478,24 @@ while in_game:
 
     player.update(dt)
 
-    handle_player(player)
+    handle_player(player, speed_mod)
 
     for proj in client_projectile:
         proj.update(dt)
         if proj.rect.collidelist(obstacles) != -1:
-            client_projectile.remove(proj)
+            if proj.type == "damage":
+                client_projectile.remove(proj)
+            if proj.type == "slow":
+                if proj.speed != 0:
+                    proj.speed = 0
+                    proj.sizeUp()
+                else:
+                    if proj.kill:
+                        client_projectile.remove(proj)
         if proj.rect.x < 0 or proj.rect.x + proj.rect.width > 1280:
             client_projectile.remove(proj)
         if proj.rect.y < 0 or proj.rect.y + proj.rect.height > 800:
             client_projectile.remove(proj)
-
-    packet = {
-        "x": player.rect.x,
-        "y": player.rect.y,
-        "hp": player.current_health,
-        "proj": client_projectile
-    }
-
-    server_packet = client.get(["packet",packet])
 
     map_system.handle_fog(map_system.getEntityNode(player), player.vision)
     # fill the screen with a color to wipe away anything from last frame
@@ -495,11 +525,11 @@ while in_game:
         if entity is not client_id:
             if entity in server_packet:
                 for proj in server_packet[entity]["proj"]:
-                    pygame.draw.rect(screen, "red", proj.rect)
+                    proj.draw()
 
 
     for proj in client_projectile:
-        pygame.draw.rect(screen, "green", proj.rect)
+        proj.draw()
 
     #Drawing fog of war
     map_system.draw()

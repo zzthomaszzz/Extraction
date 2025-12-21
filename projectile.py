@@ -4,18 +4,26 @@ import pygame
 
 class Projectile:
 
-    def __init__(self, x, y, size, _type):
+    def __init__(self, x, y, size, _type, owner):
         self.rect = pygame.rect.Rect(0, 0, size, size)
         self.type = _type
         self.rect.center = (x, y)
+        self.color = (0, 0, 0)
+        self.id = owner
+
+    def set_color(self, enemy = False):
+        if not enemy:
+            self.color = "green"
+        else:
+            self.color = "red"
 
 class Bullet(Projectile):
 
-    def __init__(self, x, y, destination):
-        super().__init__(x, y, 5, "damage")
+    def __init__(self, x, y, destination, owner):
+        super().__init__(x, y, 5, "damage", owner)
         self.direction = [0.0,0.0]
         self.speed = 600
-        self.damage = 10
+        self.type_value = 10
         self.set_direction(destination)
 
     def set_direction(self, target_destination):
@@ -30,3 +38,47 @@ class Bullet(Projectile):
     def update(self, dt):
         self.rect.x += self.direction[0] * self.speed * dt
         self.rect.y += self.direction[1] * self.speed * dt
+
+    def draw(self):
+        pygame.draw.rect(pygame.display.get_surface(), self.color, self.rect, 1)
+
+class SlowZone(Projectile):
+    def __init__(self, x, y, destination, owner):
+        super().__init__(x, y, 16, "slow", owner)
+        self.direction = [0.0,0.0]
+        self.speed = 100
+        self.type_value = 0.5
+        self.set_direction(destination)
+
+        self.linger = 10
+        self.linger_count = 0
+        self.kill = False
+
+    def sizeUp(self):
+        self.rect.size = (128, 128)
+
+    def set_direction(self, target_destination):
+        x_axis = target_destination[0] - self.rect.centerx
+        y_axis = target_destination[1] - self.rect.centery
+        angle = math.atan2(y_axis, x_axis)
+        direction_y = round(math.sin(angle), 2)
+        direction_x = round(math.cos(angle), 2)
+        self.direction[0] = direction_x
+        self.direction[1] = direction_y
+
+    def update(self, dt):
+        if self.speed != 0:
+            self.rect.x += self.direction[0] * self.speed * dt
+            self.rect.y += self.direction[1] * self.speed * dt
+        else:
+            self.linger_count += dt
+            if self.linger_count > self.linger:
+                self.kill = True
+    def set_color(self, enemy = False):
+        if not enemy:
+            self.color = "green"
+        else:
+            self.color = "orange"
+
+    def draw(self):
+        pygame.draw.rect(pygame.display.get_surface(), "orange", self.rect, 1)

@@ -97,7 +97,7 @@ def process_data(data, _id):
         case "all player health":
             all_player_health[_id] = data[1]
             return all_player_health
-        case "all player projectile":
+        case "all player primary":
             all_player_projectile[_id] = [data[1], data[2]]
             return all_player_projectile
         case "all active player":
@@ -152,11 +152,14 @@ def start_server():
     print(f"Server listening on {host}:{port}")
     while not GAME_START:
         if len(current_players) < 6:
-            available_id = [1, 2, 3, 4, 5, 6]
+            available_id = {1, 2, 3, 4, 5, 6}
+            taken_id = {0}
             for _id in available_id:
                 if _id in current_players:
-                    available_id.remove(_id)
-            client_id = random.choice(available_id)
+                    taken_id.add(_id)
+            valid_options = available_id - taken_id
+            valid_options = list(valid_options)
+            client_id = random.choice(valid_options)
             try:
                 client_socket, addr = server_socket.accept()
             except socket.timeout:
