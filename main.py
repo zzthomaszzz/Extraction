@@ -48,6 +48,9 @@ soldier = pygame.image.load("asset/soldier.png")
 alien = pygame.image.load("asset/alien.png")
 mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
+bullet = pygame.image.load("asset/bullet.png")
+slow_phase_1 = pygame.image.load("asset/slow_1.png")
+slow_phase_2 = pygame.image.load("asset/slow_2.png")
 
 character_choice = None
 team_choice = None
@@ -407,8 +410,9 @@ def isEnemy(_id):
 def get_projectiles(_packet):
     data = []
     for key, value in _packet.items():
-        for _proj in value["proj"]:
-            data.append(_proj)
+        if key != "team 1" and key != "team 2":
+            for _proj in value["proj"]:
+                data.append(_proj)
     return data
 
 def get_hp_percent():
@@ -503,6 +507,38 @@ while in_game:
 
     #Drawing all players and their health bars
     #Note that the main player character will not be covered by fog
+
+    for entity in current_players:
+        if entity is not client_id:
+            if entity in server_packet:
+                for proj in server_packet[entity]["proj"]:
+                    if proj.name_id == 2:
+                        proj.draw_image(bullet)
+                    elif proj.name_id == 3:
+                        if proj.phase == 1:
+                            proj.draw_image(slow_phase_1)
+                        elif proj.phase == 2:
+                            proj.draw_image(slow_phase_2)
+                            proj.draw()
+                    else:
+                        if isEnemy(entity):
+                            proj.set_color(True)
+                        proj.draw()
+
+
+    for proj in client_projectile:
+        if proj.name_id == 2:
+            proj.draw_image(bullet)
+        elif proj.name_id == 3:
+            if proj.phase == 1:
+                proj.draw_image(slow_phase_1)
+            elif proj.phase == 2:
+                proj.draw_image(slow_phase_2)
+                proj.draw()
+        else:
+            proj.draw()
+
+
     for entity in current_players:
         if entity is not client_id:
             if entity in player_characters and entity in server_packet:
@@ -518,30 +554,21 @@ while in_game:
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
                 screen.blit(_image, (x,y))
+                border = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 11, 34, 7)
                 current_hp = server_packet[entity]["hp"] * 32
                 current_hp_rect = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 10, current_hp, 5)
+                pygame.draw.rect(screen, to_color(entity), current_hp_rect)
                 if isEnemy(entity):
                     pygame.draw.rect(screen, "red", current_hp_rect)
                 else:
                     pygame.draw.rect(screen, "green", current_hp_rect)
 
     screen.blit(player_image, (player.rect.x, player.rect.y))
+    border = pygame.rect.Rect(player.rect.x, player.rect.y - 11, 34, 7)
     current_hp = get_hp_percent() * 32
     current_hp_rect = pygame.rect.Rect(player.rect.x, player.rect.y - 10, current_hp, 5)
+    pygame.draw.rect(screen, to_color(client_color), current_hp_rect)
     pygame.draw.rect(screen, "green", current_hp_rect)
-
-    for entity in current_players:
-        if entity is not client_id:
-            if entity in server_packet:
-                for proj in server_packet[entity]["proj"]:
-                    if isEnemy(entity):
-                        proj.set_color(True)
-                    proj.draw()
-
-
-    for proj in client_projectile:
-        proj.draw()
-
     #Drawing fog of war
     map_system.draw()
 

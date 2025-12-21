@@ -7,6 +7,7 @@ class Projectile:
     def __init__(self, x, y, size, _type, owner):
         self.rect = pygame.rect.Rect(0, 0, size, size)
         self.type = _type
+        self.name_id = 1
         self.rect.center = (x, y)
         self.color = (0, 0, 0)
         self.id = owner
@@ -17,14 +18,18 @@ class Projectile:
         else:
             self.color = "red"
 
+    def draw_image(self, image):
+        pygame.display.get_surface().blit(image, self.rect)
+
 class Bullet(Projectile):
 
     def __init__(self, x, y, destination, owner):
         super().__init__(x, y, 5, "damage", owner)
         self.direction = [0.0,0.0]
-        self.speed = 600
-        self.type_value = 40
+        self.speed = 800
+        self.type_value = 50
         self.set_direction(destination)
+        self.name_id = 2
 
     def set_direction(self, target_destination):
         x_axis = target_destination[0] - self.rect.centerx
@@ -49,13 +54,17 @@ class SlowZone(Projectile):
         self.speed = 100
         self.type_value = 0.5
         self.set_direction(destination)
+        self.name_id = 3
 
+        self.phase = 1
         self.linger = 10
         self.linger_count = 0
         self.kill = False
 
     def sizeUp(self):
+        self.phase = 2
         self.rect.size = (128, 128)
+        self.rect.center = (self.rect.x, self.rect.y)
 
     def set_direction(self, target_destination):
         x_axis = target_destination[0] - self.rect.centerx
