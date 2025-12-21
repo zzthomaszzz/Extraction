@@ -18,17 +18,7 @@ current_players = []
 #Contains ID:Character name in string
 player_characters = {}
 
-
-all_player_location = {}
-
-all_player_projectile = {}
-
-all_player_health = {}
-
-
-data_packet = {}
-
-team_progress = {"1": 0, "2": 0}
+data_packet = {"team 1": 0, "team 2": 0}
 
 ready_status = {}
 team_1 = []
@@ -68,12 +58,6 @@ def remove(_id):
     current_players.remove(_id)
     if _id in player_characters:
         del player_characters[_id]
-    if _id in all_player_location:
-        del all_player_location[_id]
-    if _id in all_player_health:
-        del all_player_health[_id]
-    if _id in all_player_projectile:
-        del all_player_projectile[_id]
     if _id in team_1:
         team_1.remove(_id)
     if _id in team_2:
@@ -86,20 +70,6 @@ def process_data(data, _id):
         case "packet":
             data_packet[_id] = data[1]
             return data_packet
-        case "capture":
-            team_progress[data[1]] += 1
-            return None
-        case "team_choice progress":
-            for key in team_progress:
-                if team_progress[key] > 100:
-                    return key
-            return team_progress
-        case "all player health":
-            all_player_health[_id] = data[1]
-            return all_player_health
-        case "all player primary":
-            all_player_projectile[_id] = [data[1], data[2]]
-            return all_player_projectile
         case "all active player":
             return current_players
         case "all player character":
@@ -134,9 +104,6 @@ def process_data(data, _id):
             return GAME_START
         case "initialize":
             return _id
-        case "all location":
-            all_player_location[_id] = [data[1], data[2]]
-            return all_player_location
         case _:
             return data
 
@@ -146,7 +113,7 @@ def start_server():
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((host, port))
-    server_socket.listen(5)
+    server_socket.listen(1)
     server_socket.settimeout(10)
 
     print(f"Server listening on {host}:{port}")
