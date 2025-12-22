@@ -1,14 +1,15 @@
 import pygame
 import math
-import projectile
+from projectile import *
 
 class Player:
 
-    def __init__(self, _id, location):
+    def __init__(self, _id, location, vision = 100, health = 100, speed = 100):
         self.rect = pygame.rect.Rect(location[0], location[1], 32, 32)
         self.name = "default"
         self.left, self.right, self.up, self.down = 0, 0, 0, 0
         self.id = _id
+        self.projectile = []
 
         #I_frame data
         self.isInvincible = False
@@ -16,18 +17,21 @@ class Player:
         self.i_frame_count = 0
 
         #Basic Stat Data
-        self.vision = 100
-        self.max_health = 100
-        self.current_health = 100
-        self.speed = 100
-        self.damage = 10
+        self.default_vision = vision
+        self.max_health = health
+        self.default_speed = speed
+
+        self.health = 0
+        self.vision = 0
+        self.speed = 0
+        self.init_basic_stats()
 
         #Status data
         self.isDead = False
 
     def update(self, dt):
         self.handle_i_frame(dt)
-        if self.current_health < 0:
+        if self.health < 0:
             self.isDead = True
 
     def handle_i_frame(self, dt):
@@ -37,26 +41,94 @@ class Player:
                 self.i_frame_count = 0
                 self.isInvincible = False
 
+    def init_basic_stats(self):
+        self.health = self.max_health
+        self.speed = self.default_speed
+        self.vision = self.default_vision
+
+    def take_damage(self, value):
+        self.health -= value
+
+    def modify_speed(self, value):
+        self.speed = self.default_speed * value
+
 class Soldier(Player):
 
     def __init__(self, _id, location):
-        super().__init__(_id, location)
+        super().__init__(_id, location, 300, 550, 125)
         self.name = "soldier"
-        self.image_path = "asset/soldier.png"
 
-        #Basic stats
-        self.speed = 125
-        self.vision = 300
-        self.max_health = 550
-        self.current_health = 550
-        self.damage = 50
+        #Primary stats
+        self.attack_on_cooldown = False
+        self.default_attack_speed = 0.5
+        self.current_attack_speed = 0.5
+        self.attack_speed_counter = 0.0
+
+        #Secondary stats
+        self.isCooldown = False
+        self.health_cost = 0.1
+        self.adrenaline_cooldown = 2
+        self.adrenaline_cooldown_counter = 0.0
+        self.isBoosted = False
+        self.adrenaline_duration = 5
+        self.adrenaline_counter = 0.0
+        self.attack_speed_multiplier = 2
+        self.speed_multiplier = 1.5
+
+    def update(self, dt):
+
+        #PRIMARY
+        if self.attack_on_cooldown:
+            if self.attack_speed_counter > self.current_attack_speed:
+                self.attack_on_cooldown = False
+                self.attack_speed_counter = 0.0
+            else:
+                self.attack_speed_counter += dt
+
+        #SECONDARY
+        if self.isCooldown:
+            if self.adrenaline_cooldown_counter > self.adrenaline_cooldown:
+                self.isCooldown = False
+                self.adrenaline_cooldown_counter = 0
+            else:
+                self.adrenaline_cooldown_counter += dt
+        else:
+            if self.isBoosted:
+                if self.adrenaline_counter > self.adrenaline_duration:
+                    self.isBoosted = False
+                    self.isCooldown = True
+                    self.current_attack_speed = self.default_attack_speed
+                    self.speed = self.default_speed
+                    self.adrenaline_counter = 0
+                else:
+                    self.adrenaline_counter += dt
+                    self.current_attack_speed = self.default_attack_speed / self.attack_speed_multiplier
+                    self.speed = self.default_speed * self.speed_multiplier
+
+        super().update(dt)
+
+    def primary(self, location):
+        if not self.attack_on_cooldown:
+            if self.isBoosted:
+                bullet = Bullet(self.rect.centerx, self.rect.centery, location, self.id)
+                bullet.set_damage(bullet.type_value * 2)
+                self.projectile.append(bullet)
+            else:
+                self.projectile.append(Bullet(self.rect.centerx, self.rect.centery, location, self.id))
+            self.attack_on_cooldown = True
+
+    def secondary(self):
+        if not self.isCooldown:
+            if not self.isBoosted:
+                if self.health > self.max_health * self.health_cost:
+                    self.isBoosted = True
+                    self.health -= self.max_health * self.health_cost
 
 class Alien(Player):
 
     def __init__(self, _id, location):
         super().__init__(_id, location)
         self.name = "alien"
-        self.image_path = "asset/alien.png"
 
         # Basic stats
         self.default_speed = 150
@@ -64,9 +136,7 @@ class Alien(Player):
         self.vision = 250
         self.max_health = 800
         self.current_health = 800
-        self.max_projectile = 1
         self.vision = 250
-        self.damage = 35
 
 
     #Passive data
@@ -110,23 +180,6 @@ class Mage(Player):
         self.vision = 350
         self.max_health = 500
         self.current_health = 500
-        self.max_projectile = 5
-        self.damage = 40
-
-        #Passive data
-        #For orbiting circle
-        self.cooldown = 0.5
-        self.counter = 0
-        self.angle = 0
-        self.rotation_speed = 180
-        self.default_orbit_range = 25
-        self.orbit_range = 25
-
-    def alternate_attack(self, point):
-        if self.orbit_range == self.default_orbit_range:
-            self.orbit_range = self.default_orbit_range * 2
-        else:
-            self.orbit_range = self.default_orbit_range
 
     def update(self, dt):
         super().update(dt)
