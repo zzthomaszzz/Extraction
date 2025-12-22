@@ -56,18 +56,16 @@ class FireZone(Projectile):
         self.direction = [0.0,0.0]
         self.speed = 100
         self.slow = 0.5
-        self.damage = 5
+        self.damage = 25
+        self.phase = 1
         self.set_direction(destination)
         self.name_id = 3
 
-        self.phase = 1
-        self.linger = 10
-        self.linger_count = 0
-        self.kill = False
+    def set_damage(self, value):
+        self.damage += value
 
-    def sizeUp(self):
-        self.phase = 2
-        self.rect.size = (128, 128)
+    def set_size(self, value):
+        self.rect.size = (value, value)
         self.rect.center = (self.rect.x, self.rect.y)
 
     def set_direction(self, target_destination):
@@ -83,15 +81,6 @@ class FireZone(Projectile):
         if self.speed != 0:
             self.rect.x += self.direction[0] * self.speed * dt
             self.rect.y += self.direction[1] * self.speed * dt
-        else:
-            self.linger_count += dt
-            if self.linger_count > self.linger:
-                self.kill = True
-    def set_color(self, enemy = False):
-        if not enemy:
-            self.color = "green"
-        else:
-            self.color = "orange"
 
     def draw(self):
         pygame.draw.rect(pygame.display.get_surface(), "orange", self.rect, 1)

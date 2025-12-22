@@ -1,7 +1,5 @@
-import pygame
 import math
 
-from main import damage_dealt
 from projectile import *
 
 class Player:
@@ -90,9 +88,11 @@ class Soldier(Player):
                 x = value["x"]
                 y = value["y"]
                 rect = pygame.rect.Rect(x, y, 32, 32)
-                for proj in self.projectile:
+                proj_list = self.projectile
+                for proj in proj_list:
                     if proj.rect.colliderect(rect):
                         damage.append([key, proj.damage])
+                        self.projectile.remove(proj)
         return [], damage
 
     def update_projectile(self, dt, obstacles):
@@ -199,20 +199,70 @@ class Alien(Player):
 
 class Mage(Player):
     def __init__(self, _id, location):
-        super().__init__(_id, location)
+        super().__init__(_id, location, 350, 500, 130)
         self.name = "mage"
-
-        # Basic stats
-        self.speed = 130
-        self.vision = 350
-        self.max_health = 500
-        self.current_health = 500
 
         #PRIMARY
         self.primary_state = 1
+        self.max_distance_from_player = 300
+        self.isFireActive = True
+        self.interval = 0.25
+        self.interval_count = 0
+
+    def primary(self,location):
+        if self.primary_state == 1 and self.projectile == []:
+            print("Phase 2")
+            fire_zone = FireZone(self.rect.centerx, self.rect.centery, location, self.id)
+            self.projectile.append(fire_zone)
+            self.primary_state = 2
+        elif self.primary_state == 2:
+            print("Phase 3")
+            fire_zone = self.projectile[0]
+            fire_zone.speed = 0
+            fire_zone.set_size(128)
+            self.primary_state = 3
+            self.projectile[0].phase = 2
+        elif self.primary_state == 3:
+            print("Phase 1")
+            self.projectile = []
+            self.primary_state = 1
 
 
+    def update_projectile(self, dt, obstacles):
+        if self.primary_state == 2:
+            self.projectile[0].update(dt)
+            if self.projectile[0].rect.collidelist(obstacles) != -1:
+                self.projectile[0].speed = 0
+                self.projectile[0].set_size(128)
+                self.projectile[0].phase = 2
+                self.primary_state = 3
+        elif self.primary_state == 3:
+            if not self.isFireActive:
+                if self.interval_count > self.interval:
+                    self.interval_count = 0
+                    self.isFireActive = True
+                else:
+                    self.interval_count += dt
+            distance = math.hypot(self.projectile[0].rect.centerx - self.rect.centerx, self.projectile[0].rect.centery - self.rect.centery)
+            if distance > self.max_distance_from_player:
+                self.projectile = []
+                self.primary_state = 1
 
+    def process_projectiles(self, enemy, ally, position):
+        slow = []
+        damage = []
+        if self.primary_state == 3:
+            for key, value in position.items():
+                x = value["x"]
+                y = value["y"]
+                rect = pygame.rect.Rect(x, y, 32, 32)
+                if self.projectile[0].rect.colliderect(rect):
+                    slow.append([key, self.projectile[0].slow])
+                    if key in enemy and self.isFireActive:
+                        damage.append([key, self.projectile[0].damage])
+        if damage:
+            self.isFireActive = False
+        return slow, damage
 
     def update(self, dt):
         super().update(dt)

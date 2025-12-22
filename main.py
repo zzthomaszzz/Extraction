@@ -1,6 +1,3 @@
-import math
-
-import pygame
 import sys
 
 from client import Client
@@ -82,6 +79,8 @@ def to_color(number):
 def use_primary():
     match character_choice:
         case "soldier":
+            player.primary(pygame.mouse.get_pos())
+        case "mage":
             player.primary(pygame.mouse.get_pos())
         case _:
             pass

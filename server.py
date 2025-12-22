@@ -3,9 +3,6 @@ import threading
 import pickle
 import random
 from time import sleep
-from pygame import time
-
-from player import *
 
 MAX_PLAYER = 6
 
