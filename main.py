@@ -357,8 +357,7 @@ match character_choice:
 team_1 = client.get(["team 1"])
 team_2 = client.get(["team 2"])
 
-primary = Bullet
-secondary = SlowZone
+
 damage_dealt = []
 slow_applied = []
 
@@ -448,7 +447,13 @@ def get_slow_received(_packet):
                     total_slow *= instance[1]
     return total_slow
 
-
+def get_positions(_packet):
+    _data = {}
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            coordinate = {"x": value["x"], "y": value["y"]}
+            _data[key] = coordinate
+    return _data
 
 while in_game:
 
@@ -464,36 +469,17 @@ while in_game:
     server_packet = client.get(["packet", packet])
     server_projectile = get_projectiles(server_packet)
 
-    damage_dealt = []
-    slow_applied = []
-
     speed_mod = get_slow_received(server_packet)
     dmg_received = get_damage_received(server_packet)
 
     player.take_damage(dmg_received)
     player.modify_speed(speed_mod)
 
-    for proj in player.projectile:
-        enemyTeam = getEnemyTeam()
-        allyTeam = getAllyTeam()
-        for enemy in enemyTeam:
-            x = server_packet[enemy]["x"]
-            y = server_packet[enemy]["y"]
-            if proj.rect.collidepoint(x, y):
-                if proj.type == "damage":
-                    data = [enemy, proj.type_value]
-                    damage_dealt.append(data)
-                    player.projectile.remove(proj)
-                elif proj.type == "slow":
-                    data = [enemy, proj.type_value]
-                    slow_applied.append(data)
-        for ally in allyTeam:
-            x = server_packet[ally]["x"]
-            y = server_packet[ally]["y"]
-            if proj.rect.collidepoint(x, y):
-                if proj.type == "slow":
-                    data = [ally, proj.type_value]
-                    slow_applied.append(data)
+    enemyTeam = getEnemyTeam()
+    allyTeam = getAllyTeam()
+    player_data = get_positions(server_packet)
+
+    slow_applied, damage_dealt = player.process_projectiles(enemyTeam, allyTeam, player_data)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -535,20 +521,7 @@ while in_game:
 
     handle_player(player)
 
-    for proj in player.projectile:
-        proj.update(dt)
-        if proj.rect.collidelist(obstacles) != -1:
-            if proj.type == "damage":
-                player.projectile.remove(proj)
-            if proj.type == "slow":
-                if proj.speed != 0:
-                    proj.speed = 0
-                    proj.sizeUp()
-                else:
-                    if proj.kill:
-                        player.projectile.remove(proj)
-        elif proj.rect.x < 0 or proj.rect.x + proj.rect.width > 1280 or proj.rect.y < 0 or proj.rect.y + proj.rect.height > 800:
-            player.projectile.remove(proj)
+    player.update_projectile(dt, obstacles)
 
     map_system.handle_fog(map_system.getEntityNode(player), player.vision)
     # fill the screen with a color to wipe away anything from last frame

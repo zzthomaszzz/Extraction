@@ -1,5 +1,7 @@
 import pygame
 import math
+
+from main import damage_dealt
 from projectile import *
 
 class Player:
@@ -52,6 +54,12 @@ class Player:
     def modify_speed(self, value):
         self.speed = self.default_speed * value
 
+    def update_projectile(self, dt, obstacles):
+        pass
+
+    def process_projectiles(self, enemy, ally, position):
+        return [], []
+
 class Soldier(Player):
 
     def __init__(self, _id, location):
@@ -74,6 +82,26 @@ class Soldier(Player):
         self.adrenaline_counter = 0.0
         self.attack_speed_multiplier = 2
         self.speed_multiplier = 1.5
+
+    def process_projectiles(self, enemy, ally, position):
+        damage = []
+        for key, value in position.items():
+            if key in enemy:
+                x = value["x"]
+                y = value["y"]
+                rect = pygame.rect.Rect(x, y, 32, 32)
+                for proj in self.projectile:
+                    if proj.rect.colliderect(rect):
+                        damage.append([key, proj.damage])
+        return [], damage
+
+    def update_projectile(self, dt, obstacles):
+        for bullet in self.projectile:
+            bullet.update(dt)
+            if bullet.rect.x < 0 or bullet.rect.x + bullet.rect.width > 1280 or bullet.rect.y < 0 or bullet.rect.y + bullet.rect.height > 800:
+                self.projectile.remove(bullet)
+            elif bullet.rect.collidelist(obstacles) != -1:
+                self.projectile.remove(bullet)
 
     def update(self, dt):
 
@@ -111,7 +139,7 @@ class Soldier(Player):
         if not self.attack_on_cooldown:
             if self.isBoosted:
                 bullet = Bullet(self.rect.centerx, self.rect.centery, location, self.id)
-                bullet.set_damage(bullet.type_value * 2)
+                bullet.set_damage(bullet.damage * 2)
                 self.projectile.append(bullet)
             else:
                 self.projectile.append(Bullet(self.rect.centerx, self.rect.centery, location, self.id))
@@ -173,13 +201,18 @@ class Mage(Player):
     def __init__(self, _id, location):
         super().__init__(_id, location)
         self.name = "mage"
-        self.image_path = "asset/mage.png"
 
         # Basic stats
         self.speed = 130
         self.vision = 350
         self.max_health = 500
         self.current_health = 500
+
+        #PRIMARY
+        self.primary_state = 1
+
+
+
 
     def update(self, dt):
         super().update(dt)

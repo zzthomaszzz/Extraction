@@ -24,15 +24,15 @@ class Projectile:
 class Bullet(Projectile):
 
     def __init__(self, x, y, destination, owner):
-        super().__init__(x, y, 5, "damage", owner)
+        super().__init__(x, y, 5, ["damage"], owner)
         self.direction = [0.0,0.0]
         self.speed = 800
-        self.type_value = 25
+        self.damage = 25
         self.set_direction(destination)
         self.name_id = 2
 
     def set_damage(self, damage):
-        self.type_value = damage
+        self.damage = damage
 
     def set_direction(self, target_destination):
         x_axis = target_destination[0] - self.rect.centerx
@@ -50,12 +50,13 @@ class Bullet(Projectile):
     def draw(self):
         pygame.draw.rect(pygame.display.get_surface(), self.color, self.rect, 1)
 
-class SlowZone(Projectile):
+class FireZone(Projectile):
     def __init__(self, x, y, destination, owner):
-        super().__init__(x, y, 16, "slow", owner)
+        super().__init__(x, y, 16, ["slow","damage"], owner)
         self.direction = [0.0,0.0]
         self.speed = 100
-        self.type_value = 0.5
+        self.slow = 0.5
+        self.damage = 5
         self.set_direction(destination)
         self.name_id = 3
 

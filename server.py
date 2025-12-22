@@ -2,7 +2,6 @@ import socket
 import threading
 import pickle
 import random
-import time
 from time import sleep
 from pygame import time
 
