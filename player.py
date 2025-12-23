@@ -16,6 +16,7 @@ class Player:
         self.default_vision = vision
         self.max_health = health
         self.default_speed = speed
+        self.state = 1
 
         self.health = 0
         self.vision = 0
@@ -49,6 +50,11 @@ class Player:
     def take_damage(self, value):
         self.health -= value
 
+    def heal(self,value):
+        self.health += value
+        if self.health > self.max_health:
+            self.health = self.max_health
+
     def modify_speed(self, value):
         self.speed = self.default_speed * value
 
@@ -64,7 +70,7 @@ class Player:
 class Soldier(Player):
 
     def __init__(self, _id, location):
-        super().__init__(_id, location, 300, 550, 125)
+        super().__init__(_id, location, 220, 400, 90)
         self.name = "soldier"
 
         #Primary stats
@@ -79,10 +85,11 @@ class Soldier(Player):
         self.adrenaline_cooldown = 2
         self.adrenaline_cooldown_counter = 0.0
         self.isBoosted = False
-        self.adrenaline_duration = 5
+        self.adrenaline_duration = 3
         self.adrenaline_counter = 0.0
         self.attack_speed_multiplier = 2
         self.speed_multiplier = 1.5
+        self.damage_multiplier = 1.5
 
     def death(self):
         super().death()
@@ -134,6 +141,7 @@ class Soldier(Player):
         else:
             if self.isBoosted:
                 if self.adrenaline_counter > self.adrenaline_duration:
+                    self.state = 1
                     self.isBoosted = False
                     self.isCooldown = True
                     self.current_attack_speed = self.default_attack_speed
@@ -150,7 +158,7 @@ class Soldier(Player):
         if not self.attack_on_cooldown:
             if self.isBoosted:
                 bullet = Bullet(self.rect.centerx, self.rect.centery, location, self.id)
-                bullet.set_damage(bullet.damage * 2)
+                bullet.set_damage(bullet.damage * self.damage_multiplier)
                 self.projectile.append(bullet)
             else:
                 self.projectile.append(Bullet(self.rect.centerx, self.rect.centery, location, self.id))
@@ -160,6 +168,7 @@ class Soldier(Player):
         if not self.isCooldown:
             if not self.isBoosted:
                 if self.health > self.max_health * self.health_cost:
+                    self.state = 2
                     self.isBoosted = True
                     self.health -= self.max_health * self.health_cost
 
@@ -169,7 +178,7 @@ class Soldier(Player):
 class Alien(Player):
 
     def __init__(self, _id, location):
-        super().__init__(_id, location, 250, 800, 150)
+        super().__init__(_id, location, 150, 450, 115)
         self.name = "alien"
         self.projectile = Spike(self.rect.centerx, self.rect.centery, _id)
 
@@ -204,6 +213,7 @@ class Alien(Player):
 
     def secondary(self):
         if not self.isRage and not self.isRageCooldown:
+            self.state = 2
             self.isRage = True
             self.isRageCooldown = True
             self.speed = self.default_speed * self.slow
@@ -256,6 +266,7 @@ class Alien(Player):
 
         if self.isRage:
             if self.rage_duration_counter > self.rage_duration:
+                self.state = 1
                 self.isRage = False
                 self.speed = self.default_speed
                 self.rage_duration_counter = 0.0
@@ -276,18 +287,18 @@ class Alien(Player):
 
 class Mage(Player):
     def __init__(self, _id, location):
-        super().__init__(_id, location, 350, 500, 130)
+        super().__init__(_id, location, 250, 350, 80)
         self.name = "mage"
 
         #PRIMARY
         self.primary_state = 1
-        self.max_distance_from_player = 300
+        self.max_distance_from_player = 200
         self.isFireActive = True
         self.interval = 0.25
         self.interval_count = 0
 
         #SECONDARY
-        self.max_teleport_distance = 350
+        self.max_teleport_distance = 300
         self.isCooldown = False
         self.cooldown = 5
         self.cooldown_counter = 0.0

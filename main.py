@@ -48,14 +48,20 @@ def get_projectiles(_packet):
 def get_hp_percent():
     return player.health / player.max_health
 
-def get_character_image(name):
+def get_character_image(name, state=1):
     match name:
         case "mage":
             data = mage
         case "soldier":
-            data = soldier
+            if state == 1:
+                data = soldier
+            elif state == 2:
+                data = soldier_boost
         case "alien":
-            data = alien
+            if state == 1:
+                data = alien
+            elif state == 2:
+                data = alien_rage
         case _:
             data = default_player
     return data
@@ -109,7 +115,9 @@ pygame.init()
 game_map = pygame.image.load("asset/map.png")
 lobby = pygame.image.load("asset/lobby.png")
 soldier = pygame.image.load("asset/soldier.png")
+soldier_boost = pygame.image.load("asset/soldier_boostt.png")
 alien = pygame.image.load("asset/alien.png")
+alien_rage = pygame.image.load("asset/alien_rage.png")
 mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 bullet = pygame.image.load("asset/bullet.png")
@@ -426,9 +434,11 @@ dead_counter = 0.0
 
 team_1_point = 0.0
 team_2_point = 0.0
+
 win_condition = 100
 
-show_grid = False
+heal_zone_heal_per_second = 100
+point_per_second = 20
 
 in_game = True
 dt = 0
@@ -485,6 +495,7 @@ while in_game:
         "y": player.rect.y,
         "hp": get_hp_percent(),
         "proj": player.get_projectile(),
+        "state": player.state,
         "dmg": damage_dealt,
         "slow": slow_applied,
         "point": point
@@ -496,29 +507,28 @@ while in_game:
 
     speed_mod = get_slow_received(server_packet)
     dmg_received = get_damage_received(server_packet)
-    update_team_points(server_packet)
-
-    player.take_damage(dmg_received)
-
     enemyTeam = getEnemyTeam()
     allyTeam = getAllyTeam()
     player_data = get_positions(server_packet)
-
     slow_applied, damage_dealt = player.process_projectiles(enemyTeam, allyTeam, player_data)
 
     player.update(dt)
-
+    update_team_points(server_packet)
+    player.take_damage(dmg_received)
     handle_player(player, speed_mod)
-
     player.update_projectile(dt, obstacles)
 
     if player.rect.colliderect(capture_zone):
-        point += dt
+        point += dt * point_per_second
+
+    if player.rect.collidelist(heal_zone) != -1:
+        player.heal(heal_zone_heal_per_second*dt)
 
     map_system.handle_fog(map_system.getEntityNode(player), player.vision)
 
     if player.health <= 0 and not player.isDead:
         player.death()
+        point -= 10
         if player.id in team_1:
             player.rect.center = spawn_zone[0]
         elif player.id in team_2:
@@ -535,11 +545,6 @@ while in_game:
             if event.button == 3:
                 use_secondary()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_t:
-                if show_grid:
-                    show_grid = False
-                else:
-                    show_grid = True
             if event.key == pygame.K_a:
                 player.left = 1
             if event.key == pygame.K_d:
@@ -605,7 +610,7 @@ while in_game:
     for entity in current_players:
         if entity is not client_id:
             if entity in player_characters and entity in server_packet:
-                image = get_character_image(player_characters[entity])
+                image = get_character_image(player_characters[entity], server_packet[entity]["state"])
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
                 screen.blit(image, (x,y))
@@ -618,6 +623,7 @@ while in_game:
                 else:
                     pygame.draw.rect(screen, "green", current_hp_rect)
 
+    player_image = get_character_image(character_choice, player.state)
     screen.blit(player_image, (player.rect.x, player.rect.y))
     border = pygame.rect.Rect(player.rect.x, player.rect.y - 11, 34, 7)
     current_hp = get_hp_percent() * 32
@@ -649,6 +655,12 @@ while in_game:
 
     dt = clock.tick(30) / 1000
 
+win_image = None
+if winner == "Team 1":
+    win_image = pygame.image.load("asset/team_1.png")
+else:
+    win_image = pygame.image.load("asset/team_2.png")
+
 while in_winner_screen:
 
     for event in pygame.event.get():
@@ -658,7 +670,7 @@ while in_winner_screen:
             if event.key == pygame.K_ESCAPE:
                 in_winner_screen = False
 
-    screen.blit(lobby, (0, 0))
+    screen.blit(win_image, (0, 0))
     pygame.display.flip()
 
 pygame.quit()

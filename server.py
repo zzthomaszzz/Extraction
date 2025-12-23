@@ -68,8 +68,12 @@ def process_data(data, _id):
                 print(data[1]["point"])
                 if _id in team_1:
                     data_packet["team 1"] += data[1]["point"]
+                    if data_packet["team 1"] < 0:
+                        data_packet["team 1"] = 0
                 elif _id in team_2:
                     data_packet["team 2"] += data[1]["point"]
+                    if data_packet["team 2"] < 0:
+                        data_packet["team 2"] = 0
             data_packet[_id] = data[1]
             return data_packet
         case "all active player":

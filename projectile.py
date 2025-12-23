@@ -27,7 +27,7 @@ class Bullet(Projectile):
         super().__init__(x, y, 5, ["damage"], owner)
         self.direction = [0.0,0.0]
         self.speed = 800
-        self.damage = 25
+        self.damage = 30
         self.set_direction(destination)
         self.name_id = 2
 
