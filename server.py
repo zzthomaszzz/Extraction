@@ -14,7 +14,7 @@ current_players = []
 #Contains ID:Character name in string
 player_characters = {}
 
-data_packet = {"team 1": 0, "team 2": 0}
+data_packet = {"team 1": 0.0, "team 2": 0.0}
 
 ready_status = {}
 team_1 = []
@@ -31,13 +31,13 @@ def handle_client(client, address, _id):
     ready_status[_id] = False
 
     # Run once data goes here
-    initialize_data = client.recv(2048)
+    initialize_data = client.recv(4096)
     initialize_reply = process_data(pickle.loads(initialize_data), _id)
     client.sendall(pickle.dumps(initialize_reply))
 
     try:
         while True:
-            data = client.recv(2048)
+            data = client.recv(4096)
             if not data:
                 break
             response = process_data(pickle.loads(data), _id)
@@ -64,6 +64,12 @@ def remove(_id):
 def process_data(data, _id):
     match data[0]:
         case "packet":
+            if data[1]["point"] != 0:
+                print(data[1]["point"])
+                if _id in team_1:
+                    data_packet["team 1"] += data[1]["point"]
+                elif _id in team_2:
+                    data_packet["team 2"] += data[1]["point"]
             data_packet[_id] = data[1]
             return data_packet
         case "all active player":

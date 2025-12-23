@@ -422,8 +422,10 @@ winner = ""
 in_winner_screen = True
 
 dead_timer = 5
-dead_counter = 0
+dead_counter = 0.0
 
+team_1_point = 0.0
+team_2_point = 0.0
 win_condition = 100
 
 show_grid = False
@@ -462,7 +464,21 @@ def get_positions(_packet):
             _data[key] = coordinate
     return _data
 
+def update_team_points(_packet):
+    global team_1_point
+    global team_2_point
+    for key, value in _packet.items():
+        if key == "team 1":
+            team_1_point = value
+        if key == "team 2":
+            team_2_point = value
+
 while in_game:
+
+    if player.isDead:
+        if dead_counter > dead_timer:
+            player.respawn()
+            dead_counter = 0.0
 
     packet = {
         "x": player.rect.x,
@@ -470,14 +486,17 @@ while in_game:
         "hp": get_hp_percent(),
         "proj": player.get_projectile(),
         "dmg": damage_dealt,
-        "slow": slow_applied
+        "slow": slow_applied,
+        "point": point
     }
 
     server_packet = client.get(["packet", packet])
+    point = 0.0
     server_projectile = get_projectiles(server_packet)
 
     speed_mod = get_slow_received(server_packet)
     dmg_received = get_damage_received(server_packet)
+    update_team_points(server_packet)
 
     player.take_damage(dmg_received)
 
@@ -486,6 +505,25 @@ while in_game:
     player_data = get_positions(server_packet)
 
     slow_applied, damage_dealt = player.process_projectiles(enemyTeam, allyTeam, player_data)
+
+    player.update(dt)
+
+    handle_player(player, speed_mod)
+
+    player.update_projectile(dt, obstacles)
+
+    if player.rect.colliderect(capture_zone):
+        point += dt
+
+    map_system.handle_fog(map_system.getEntityNode(player), player.vision)
+
+    if player.health <= 0 and not player.isDead:
+        player.death()
+        if player.id in team_1:
+            player.rect.center = spawn_zone[0]
+        elif player.id in team_2:
+            player.rect.center = spawn_zone[1]
+        dead_counter = 0.0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -523,18 +561,10 @@ while in_game:
             if event.key == pygame.K_w:
                 player.up = 0
 
-    player.update(dt)
 
-    handle_player(player, speed_mod)
-
-    player.update_projectile(dt, obstacles)
-
-    map_system.handle_fog(map_system.getEntityNode(player), player.vision)
-    # fill the screen with a color to wipe away anything from last frame
+##########################################################
+    #DRAWING
     screen.blit(game_map, (0, 0))
-
-    #Drawing all players and their health bars
-    #Note that the main player character will not be covered by fog
 
     for entity in current_players:
         if entity is not client_id:
@@ -597,15 +627,22 @@ while in_game:
     #Drawing fog of war
     map_system.draw()
 
-    #Test Drawing
-    if show_grid:
-        for i in map_system.nodes:
-            for _node in i:
-                pygame.draw.rect(screen, "red", _node.rect, 1)
-    for _ in obstacles:
-        pygame.draw.rect(screen, "black", _, 2)
+    team_1_progress_bar = pygame.rect.Rect(96, 0, 320, 32)
+    team_2_progress_bar = pygame.rect.Rect(864, 768, 320, 32)
+    team_1_progress = pygame.rect.Rect(96, 0, (team_1_point/win_condition) * 320, 32)
+    team_2_progress = pygame.rect.Rect(864, 768, (team_2_point / win_condition) * 320, 32)
 
+    pygame.draw.rect(screen, "blue", team_1_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_1_progress)
+    pygame.draw.rect(screen, "blue", team_2_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_2_progress)
 
+    if team_1_point >= 100 or team_2_point >= 100:
+        if team_1_point > team_2_point:
+            winner = "Team 1"
+        else:
+            winner = "Team 2"
+        in_game = False
 
     # flip() the display to put your work on screen
     pygame.display.flip()
@@ -621,7 +658,7 @@ while in_winner_screen:
             if event.key == pygame.K_ESCAPE:
                 in_winner_screen = False
 
-    screen.blit(game_map, (0, 0))
+    screen.blit(lobby, (0, 0))
     pygame.display.flip()
 
 pygame.quit()

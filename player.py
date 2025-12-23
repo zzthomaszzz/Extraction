@@ -12,11 +12,6 @@ class Player:
         self.id = _id
         self.projectile = []
 
-        #I_frame data
-        self.isInvincible = False
-        self.i_frame_duration = 0.2
-        self.i_frame_count = 0
-
         #Basic Stat Data
         self.default_vision = vision
         self.max_health = health
@@ -31,16 +26,20 @@ class Player:
         self.isDead = False
 
     def update(self, dt):
-        self.handle_i_frame(dt)
         if self.health < 0:
-            self.isDead = True
+            self.death()
 
-    def handle_i_frame(self, dt):
-        if self.isInvincible:
-            self.i_frame_count += dt
-            if self.i_frame_count >= self.i_frame_duration:
-                self.i_frame_count = 0
-                self.isInvincible = False
+    def death(self):
+        self.isDead = True
+        self.health = 0
+        self.vision = 0
+        self.speed = 0
+
+    def respawn(self):
+        self.isDead = False
+        self.health = self.max_health
+        self.speed = self.default_speed
+        self.vision = self.default_vision
 
     def init_basic_stats(self):
         self.health = self.max_health
@@ -84,6 +83,14 @@ class Soldier(Player):
         self.adrenaline_counter = 0.0
         self.attack_speed_multiplier = 2
         self.speed_multiplier = 1.5
+
+    def death(self):
+        super().death()
+        self.attack_on_cooldown = False
+        self.isCooldown = False
+        self.isBoosted = False
+        self.adrenaline_cooldown_counter = 0.0
+        self.adrenaline_counter = 0.0
 
     def process_projectiles(self, enemy, ally, position):
         damage = []
@@ -186,6 +193,15 @@ class Alien(Player):
         self.rage_duration_counter = 0.0
         self.slow = 0.5
 
+    def death(self):
+        super().death()
+        self.isAttacking = False
+        self.isAttackOnCooldown = False
+        self.isRage = False
+        self.isRageCooldown = False
+        self.rage_duration_counter = 0.0
+        self.rage_duration_counter = 0.0
+
     def secondary(self):
         if not self.isRage and not self.isRageCooldown:
             self.isRage = True
@@ -275,6 +291,14 @@ class Mage(Player):
         self.isCooldown = False
         self.cooldown = 5
         self.cooldown_counter = 0.0
+
+    def death(self):
+        self.isCooldown = False
+        self.cooldown_counter = 0.0
+        self.isFireActive = False
+        self.interval_count = 0.0
+        self.primary_state = 1
+        self.projectile = []
 
     def primary(self,location):
         if self.primary_state == 1 and self.projectile == []:
