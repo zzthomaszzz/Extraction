@@ -1,5 +1,7 @@
 import sys
 
+import pygame.mouse
+
 from client import Client
 from mapSystem import MapSystem
 from player import *
@@ -82,12 +84,18 @@ def use_primary():
             player.primary(pygame.mouse.get_pos())
         case "mage":
             player.primary(pygame.mouse.get_pos())
+        case "alien":
+            player.primary()
         case _:
             pass
 
 def use_secondary():
     match character_choice:
         case "soldier":
+            player.secondary()
+        case "mage":
+            player.secondary(map_system.getNodeFromPos(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]))
+        case "alien":
             player.secondary()
         case _:
             pass
@@ -363,15 +371,15 @@ slow_applied = []
 
 map_system = MapSystem(1280, 800, obstacles, spawn_zone)
 
-def handle_player(_player):
-    _player.rect.x += (_player.right - _player.left) * _player.speed * dt
+def handle_player(_player, mod):
+    _player.rect.x += (_player.right - _player.left) * (_player.speed * mod)* dt
     if _player.rect.x < 0:
         _player.rect.x = 0
     if _player.rect.x + 32 > 1280:
         _player.rect.x = 1280 - 32
     adjust_horizontal(_player, map_system.obstacles)
 
-    _player.rect.y += (_player.down - _player.up) * _player.speed * dt
+    _player.rect.y += (_player.down - _player.up) * (_player.speed * mod) * dt
     if _player.rect.y < 0:
         _player.rect.y = 0
     if _player.rect.y + 32 > 800:
@@ -460,7 +468,7 @@ while in_game:
         "x": player.rect.x,
         "y": player.rect.y,
         "hp": get_hp_percent(),
-        "proj": player.projectile,
+        "proj": player.get_projectile(),
         "dmg": damage_dealt,
         "slow": slow_applied
     }
@@ -472,7 +480,6 @@ while in_game:
     dmg_received = get_damage_received(server_packet)
 
     player.take_damage(dmg_received)
-    player.modify_speed(speed_mod)
 
     enemyTeam = getEnemyTeam()
     allyTeam = getAllyTeam()
@@ -518,7 +525,7 @@ while in_game:
 
     player.update(dt)
 
-    handle_player(player)
+    handle_player(player, speed_mod)
 
     player.update_projectile(dt, obstacles)
 
@@ -541,13 +548,15 @@ while in_game:
                         elif proj.phase == 2:
                             proj.draw_image(slow_phase_2)
                             proj.draw()
+                    elif proj.name_id == 4:
+                            proj.draw()
                     else:
                         if isEnemy(entity):
                             proj.set_color(True)
                         proj.draw()
 
 
-    for proj in player.projectile:
+    for proj in player.get_projectile():
         if proj.name_id == 2:
             proj.draw_image(bullet)
         elif proj.name_id == 3:
@@ -555,6 +564,9 @@ while in_game:
                 proj.draw_image(slow_phase_1)
             elif proj.phase == 2:
                 proj.draw_image(slow_phase_2)
+                proj.draw()
+        elif proj.name_id == 4:
+            if player.isAttacking:
                 proj.draw()
         else:
             proj.draw()

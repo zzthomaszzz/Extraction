@@ -84,3 +84,15 @@ class FireZone(Projectile):
 
     def draw(self):
         pygame.draw.rect(pygame.display.get_surface(), "orange", self.rect, 1)
+
+class Spike(Projectile):
+    def __init__(self, x, y, owner):
+        super().__init__(x, y, 64, ["damage"], owner)
+        self.name_id = 4
+        self.damage = 40
+
+    def set_pos(self, x, y):
+        self.rect.center = (x, y)
+
+    def draw(self):
+        pygame.draw.rect(pygame.display.get_surface(), "green", self.rect, 1)

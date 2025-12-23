@@ -1,4 +1,5 @@
 import math
+from math import hypot
 
 from projectile import *
 
@@ -57,6 +58,9 @@ class Player:
 
     def process_projectiles(self, enemy, ally, position):
         return [], []
+
+    def get_projectile(self):
+        return []
 
 class Soldier(Player):
 
@@ -152,50 +156,107 @@ class Soldier(Player):
                     self.isBoosted = True
                     self.health -= self.max_health * self.health_cost
 
+    def get_projectile(self):
+        return self.projectile
+
 class Alien(Player):
 
     def __init__(self, _id, location):
-        super().__init__(_id, location)
+        super().__init__(_id, location, 250, 800, 150)
         self.name = "alien"
+        self.projectile = Spike(self.rect.centerx, self.rect.centery, _id)
 
-        # Basic stats
-        self.default_speed = 150
-        self.speed = 150
-        self.vision = 250
-        self.max_health = 800
-        self.current_health = 800
-        self.vision = 250
+        #PASSIVE
+        self.damage_reduction = 0.8
 
+        #PRIMARY
+        self.isAttacking = False
+        self.isAttackOnCooldown = False
+        self.attack_duration = 0.25
+        self.attack_duration_counter = 0.0
+        self.attack_cooldown = 0.25
+        self.attack_cooldown_counter = 0.0
 
-    #Passive data
-        self.regen = 5
-        self.counter = 0
+        #SECONDARY
+        self.rage_duration = 3
+        self.isRage = False
+        self.isRageCooldown = False
+        self.rage_cooldown = 10
+        self.rage_cooldown_counter = 0.0
+        self.rage_duration_counter = 0.0
+        self.slow = 0.5
+
+    def secondary(self):
+        if not self.isRage and not self.isRageCooldown:
+            self.isRage = True
+            self.isRageCooldown = True
+            self.speed = self.default_speed * self.slow
+
+    def primary(self):
+        if not self.isAttacking and not self.isAttackOnCooldown:
+            self.isAttacking = True
+            self.projectile.set_pos(self.rect.centerx, self.rect.centery)
+            self.isAttackOnCooldown = True
+
+    def process_projectiles(self, enemy, ally, position):
+        damage = []
+        for key, value in position.items():
+            if key in enemy:
+                x = value["x"]
+                y = value["y"]
+                rect = pygame.rect.Rect(x, y, 32, 32)
+                if self.projectile.rect.colliderect(rect) and self.isAttacking:
+                    damage.append([key, self.projectile.damage])
+        if damage:
+            self.isAttacking = False
+        return [], damage
+
+    def take_damage(self, value):
+        if not self.isRage:
+            self.health -= value * self.damage_reduction
+        else:
+            self.health += value
+            if self.health > self.max_health:
+                self.health = self.max_health
 
     def update(self, dt):
+        if self.isAttacking:
+            if self.attack_duration_counter > self.attack_duration:
+                self.isAttacking = False
+                self.attack_duration_counter = 0.0
+                if not self.isRage:
+                    self.speed = self.default_speed
+                else:
+                    self.speed = self.default_speed * self.slow
+            else:
+                self.attack_duration_counter += dt
+                self.speed = 0
+        elif not self.isAttacking and self.isAttackOnCooldown:
+            if self.attack_cooldown_counter > self.attack_cooldown:
+                self.isAttackOnCooldown = False
+                self.attack_cooldown_counter = 0.0
+            else:
+                self.attack_cooldown_counter += dt
+
+        if self.isRage:
+            if self.rage_duration_counter > self.rage_duration:
+                self.isRage = False
+                self.speed = self.default_speed
+                self.rage_duration_counter = 0.0
+            else:
+                self.rage_duration_counter += dt
+        elif not self.isRage and self.isRageCooldown:
+            if self.rage_cooldown_counter > self.rage_cooldown:
+                self.isRageCooldown = False
+                self.rage_cooldown_counter = 0.0
+            else:
+                self.rage_cooldown_counter += dt
         super().update(dt)
-        if not self.isDead:
-            self.set_regeneration_rate()
-            self.regenerate(dt)
 
-    def set_regeneration_rate(self):
-        if self.current_health < 150:
-            self.regen = 15
-            self.speed = self.default_speed / 3
-        elif self.current_health < 400:
-            self.regen = 10
-            self.speed = self.default_speed / 2
-        else:
-            self.regen = 5
-            self.speed = self.default_speed
-
-    def regenerate(self, dt):
-        if self.current_health < self.max_health:
-            self.counter += dt
-            if self.counter >= 1:
-                self.counter = 0
-                self.current_health += self.regen
-                if self.current_health > self.max_health:
-                    self.current_health = self.max_health
+    def get_projectile(self):
+        if self.isAttacking:
+            return [self.projectile]
+        return []
 
 class Mage(Player):
     def __init__(self, _id, location):
@@ -208,6 +269,12 @@ class Mage(Player):
         self.isFireActive = True
         self.interval = 0.25
         self.interval_count = 0
+
+        #SECONDARY
+        self.max_teleport_distance = 350
+        self.isCooldown = False
+        self.cooldown = 5
+        self.cooldown_counter = 0.0
 
     def primary(self,location):
         if self.primary_state == 1 and self.projectile == []:
@@ -226,6 +293,14 @@ class Mage(Player):
             print("Phase 1")
             self.projectile = []
             self.primary_state = 1
+
+    def secondary(self,node):
+        if not self.isCooldown:
+            if node.traversable == 1:
+                dist = math.hypot(node.rect.centerx - self.rect.centerx, node.rect.centery - self.rect.centery)
+                if dist <self.max_teleport_distance:
+                    self.rect.center = node.rect.center
+                    self.isCooldown = True
 
 
     def update_projectile(self, dt, obstacles):
@@ -265,5 +340,14 @@ class Mage(Player):
         return slow, damage
 
     def update(self, dt):
+        if self.isCooldown:
+            if self.cooldown_counter > self.cooldown:
+                self.isCooldown = False
+                self.cooldown_counter = 0.0
+            else:
+                self.cooldown_counter += dt
         super().update(dt)
+
+    def get_projectile(self):
+        return self.projectile
 
