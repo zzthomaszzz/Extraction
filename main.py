@@ -489,6 +489,8 @@ while in_game:
         if dead_counter > dead_timer:
             player.respawn()
             dead_counter = 0.0
+        else:
+            dead_counter += dt
 
     packet = {
         "x": player.rect.x,
@@ -530,9 +532,9 @@ while in_game:
         player.death()
         point -= 10
         if player.id in team_1:
-            player.rect.center = spawn_zone[0]
+            player.rect.center = spawn_zone[0].center
         elif player.id in team_2:
-            player.rect.center = spawn_zone[1]
+            player.rect.center = spawn_zone[1].center
         dead_counter = 0.0
 
     for event in pygame.event.get():
