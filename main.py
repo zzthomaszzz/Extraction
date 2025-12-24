@@ -1,7 +1,6 @@
-import math
-
-import pygame
 import sys
+
+import pygame.mouse
 
 from client import Client
 from mapSystem import MapSystem
@@ -17,8 +16,56 @@ except ConnectionRefusedError as e:
     print("Server is not in_game or in_lobby is full")
     sys.exit()
 
-#-----------------------------------------------------------------------------------------------------------------------
-#PRE-LOBBY
+def isEnemy(_id):
+    if team_choice == 1:
+        if _id in team_2:
+            return True
+    if team_choice == 2:
+        if _id in team_1:
+            return True
+    return False
+
+def getEnemyTeam():
+    if team_choice == 1:
+        return team_2
+    elif team_choice == 2:
+        return team_1
+
+def getAllyTeam():
+    if team_choice == 1:
+        return team_1
+    elif team_choice == 2:
+        return team_2
+
+def get_projectiles(_packet):
+    data = []
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            for _proj in value["proj"]:
+                data.append(_proj)
+    return data
+
+def get_hp_percent():
+    return player.health / player.max_health
+
+def get_character_image(name, state=1):
+    match name:
+        case "mage":
+            data = mage
+        case "soldier":
+            if state == 1:
+                data = soldier
+            elif state == 2:
+                data = soldier_boost
+        case "alien":
+            if state == 1:
+                data = alien
+            elif state == 2:
+                data = alien_rage
+        case _:
+            data = default_player
+    return data
+
 def to_color(number):
     match number:
         case 1:
@@ -37,7 +84,30 @@ def to_color(number):
             _color = (0, 0, 0)
     return _color
 
+def use_primary():
+    match character_choice:
+        case "soldier":
+            player.primary(pygame.mouse.get_pos())
+        case "mage":
+            player.primary(pygame.mouse.get_pos())
+        case "alien":
+            player.primary()
+        case _:
+            pass
 
+def use_secondary():
+    match character_choice:
+        case "soldier":
+            player.secondary()
+        case "mage":
+            player.secondary(map_system.getNodeFromPos(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]))
+        case "alien":
+            player.secondary()
+        case _:
+            pass
+
+#-----------------------------------------------------------------------------------------------------------------------
+#PRE-LOBBY
 pygame.init()
 #make sure the screen size is divisible by 32
 
@@ -45,7 +115,9 @@ pygame.init()
 game_map = pygame.image.load("asset/map.png")
 lobby = pygame.image.load("asset/lobby.png")
 soldier = pygame.image.load("asset/soldier.png")
+soldier_boost = pygame.image.load("asset/soldier_boostt.png")
 alien = pygame.image.load("asset/alien.png")
+alien_rage = pygame.image.load("asset/alien_rage.png")
 mage = pygame.image.load("asset/mage.png")
 default_player = pygame.image.load("asset/default_player.png")
 bullet = pygame.image.load("asset/bullet.png")
@@ -146,19 +218,11 @@ while in_lobby:
     screen.blit(lobby, (0, 0))
 
     if character_choice is not None:
-        match character_choice:
-            case "soldier":
-                _image = soldier
-            case "mage":
-                _image = mage
-            case "alien":
-                _image = alien
-            case _:
-                _image = default_player
-        new_width = _image.get_width() * 4
-        new_height = _image.get_height() * 4
+        image = get_character_image(character_choice)
+        new_width = image.get_width() * 4
+        new_height = image.get_height() * 4
         new_size = (new_width, new_height)
-        scaled_image = pygame.transform.scale(_image, new_size)
+        scaled_image = pygame.transform.scale(image, new_size)
         screen.blit(scaled_image, (color_holder.x, color_holder.y - 128))
 
     pygame.draw.rect(screen, client_color, color_holder)
@@ -170,19 +234,11 @@ while in_lobby:
 
         if player in characters:
             character = characters[player]
-            match character:
-                case "soldier":
-                    _image = soldier
-                case "mage":
-                    _image = mage
-                case "alien":
-                    _image = alien
-                case _:
-                    _image = default_player
-            new_width = _image.get_width() * 2
-            new_height = _image.get_height() * 2
+            image = get_character_image(character)
+            new_width = image.get_width() * 2
+            new_height = image.get_height() * 2
             new_size = (new_width, new_height)
-            scaled_image = pygame.transform.scale(_image, new_size)
+            scaled_image = pygame.transform.scale(image, new_size)
             screen.blit(scaled_image, (team_1_holder[count].x, team_1_holder[count].y))
 
         if player in ready:
@@ -197,19 +253,11 @@ while in_lobby:
 
         if player in characters:
             character = characters[player]
-            match character:
-                case "soldier":
-                    _image = soldier
-                case "mage":
-                    _image = mage
-                case "alien":
-                    _image = alien
-                case _:
-                    _image = default_player
-            new_width = _image.get_width() * 2
-            new_height = _image.get_height() * 2
+            image = get_character_image(character)
+            new_width = image.get_width() * 2
+            new_height = image.get_height() * 2
             new_size = (new_width, new_height)
-            scaled_image = pygame.transform.scale(_image, new_size)
+            scaled_image = pygame.transform.scale(image, new_size)
             screen.blit(scaled_image, (team_2_holder[count].x, team_2_holder[count].y))
 
         if player in ready:
@@ -228,19 +276,11 @@ while in_lobby:
             pygame.draw.rect(screen, "green", holder[0], 2)
         else:
             pygame.draw.rect(screen, "blue", holder[0], 2)
-        match holder[1]:
-            case "soldier":
-                _image = soldier
-            case "mage":
-                _image = mage
-            case "alien":
-                _image = alien
-            case _:
-                _image = default_player
-        new_width = _image.get_width() * 2
-        new_height = _image.get_height() * 2
+        image = get_character_image(holder[1])
+        new_width = image.get_width() * 2
+        new_height = image.get_height() * 2
         new_size = (new_width, new_height)
-        scaled_image = pygame.transform.scale(_image, new_size)
+        scaled_image = pygame.transform.scale(image, new_size)
         screen.blit(scaled_image, (holder[0].x, holder[0].y))
 
     pygame.display.flip()
@@ -332,21 +372,22 @@ match character_choice:
 team_1 = client.get(["team 1"])
 team_2 = client.get(["team 2"])
 
-primary = Bullet
-secondary = SlowZone
-client_projectile = []
+
+damage_dealt = []
+slow_applied = []
+
 
 map_system = MapSystem(1280, 800, obstacles, spawn_zone)
 
-def handle_player(_player, modify):
-    _player.rect.x += (_player.right - _player.left) * (_player.speed * modify) * dt
+def handle_player(_player, mod):
+    _player.rect.x += (_player.right - _player.left) * (_player.speed * mod)* dt
     if _player.rect.x < 0:
         _player.rect.x = 0
     if _player.rect.x + 32 > 1280:
         _player.rect.x = 1280 - 32
     adjust_horizontal(_player, map_system.obstacles)
 
-    _player.rect.y += (_player.down - _player.up) * (_player.speed * modify) * dt
+    _player.rect.y += (_player.down - _player.up) * (_player.speed * mod) * dt
     if _player.rect.y < 0:
         _player.rect.y = 0
     if _player.rect.y + 32 > 800:
@@ -389,62 +430,112 @@ winner = ""
 in_winner_screen = True
 
 dead_timer = 5
-dead_counter = 0
+dead_counter = 0.0
+
+team_1_point = 0.0
+team_2_point = 0.0
 
 win_condition = 100
 
-show_grid = False
+heal_zone_heal_per_second = 100
+point_per_second = 20
 
 in_game = True
 dt = 0
 
-def isEnemy(_id):
-    if team_choice == 1:
-        if _id in team_2:
-            return True
-    if team_choice == 2:
-        if _id in team_1:
-            return True
-    return False
-
-def get_projectiles(_packet):
-    data = []
-    for key, value in _packet.items():
-        if key != "team 1" and key != "team 2":
-            for _proj in value["proj"]:
-                data.append(_proj)
-    return data
-
-def get_hp_percent():
-    return player.current_health / player.max_health
-
 #-----------------------------------------------------------------------------------------------------------------------
 #GAME
 
+def get_damage_received(_packet):
+    total_damage = 0
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            damage_received = value["dmg"]
+            for instance in damage_received:
+                if instance[0] == client_id:
+                    total_damage += instance[1]
+    return total_damage
+
+def get_slow_received(_packet):
+    total_slow = 1
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            slow_received = value["slow"]
+            for instance in slow_received:
+                if instance[0] == client_id:
+                    total_slow *= instance[1]
+    return total_slow
+
+def get_positions(_packet):
+    _data = {}
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            coordinate = {"x": value["x"], "y": value["y"]}
+            _data[key] = coordinate
+    return _data
+
+def update_team_points(_packet):
+    global team_1_point
+    global team_2_point
+    for key, value in _packet.items():
+        if key == "team 1":
+            team_1_point = value
+        if key == "team 2":
+            team_2_point = value
+
 while in_game:
+
+    if player.isDead:
+        if dead_counter > dead_timer:
+            player.respawn()
+            dead_counter = 0.0
+        else:
+            dead_counter += dt
 
     packet = {
         "x": player.rect.x,
         "y": player.rect.y,
         "hp": get_hp_percent(),
-        "proj": client_projectile
+        "proj": player.get_projectile(),
+        "state": player.state,
+        "dmg": damage_dealt,
+        "slow": slow_applied,
+        "point": point
     }
 
     server_packet = client.get(["packet", packet])
+    point = 0.0
     server_projectile = get_projectiles(server_packet)
 
+    speed_mod = get_slow_received(server_packet)
+    dmg_received = get_damage_received(server_packet)
+    enemyTeam = getEnemyTeam()
+    allyTeam = getAllyTeam()
+    player_data = get_positions(server_packet)
+    slow_applied, damage_dealt = player.process_projectiles(enemyTeam, allyTeam, player_data)
 
-    speed_mod = 1
-    for proj in server_projectile:
-        if proj.rect.colliderect(player.rect):
-            if proj.type == "slow":
-                speed_mod = proj.type_value
-            if proj.type == "damage":
-                if isEnemy(proj.id) and not player.isInvincible:
-                    player.current_health -= proj.type_value
-                    player.isInvincible = True
-                    print(f"Player took damage, current health is now {player.current_health}")
+    player.update(dt)
+    update_team_points(server_packet)
+    player.take_damage(dmg_received)
+    handle_player(player, speed_mod)
+    player.update_projectile(dt, obstacles)
 
+    if player.rect.colliderect(capture_zone):
+        point += dt * point_per_second
+
+    if player.rect.collidelist(heal_zone) != -1:
+        player.heal(heal_zone_heal_per_second*dt)
+
+    map_system.handle_fog(map_system.getEntityNode(player), player.vision)
+
+    if player.health <= 0 and not player.isDead:
+        player.death()
+        point -= 10
+        if player.id in team_1:
+            player.rect.center = spawn_zone[0].center
+        elif player.id in team_2:
+            player.rect.center = spawn_zone[1].center
+        dead_counter = 0.0
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -452,15 +543,10 @@ while in_game:
             in_winner_screen = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                client_projectile.append(primary(player.rect.x, player.rect.y, pygame.mouse.get_pos(), client_id))
+                use_primary()
             if event.button == 3:
-                client_projectile.append(secondary(player.rect.x, player.rect.y, pygame.mouse.get_pos(), client_id))
+                use_secondary()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_t:
-                if show_grid:
-                    show_grid = False
-                else:
-                    show_grid = True
             if event.key == pygame.K_a:
                 player.left = 1
             if event.key == pygame.K_d:
@@ -482,31 +568,10 @@ while in_game:
             if event.key == pygame.K_w:
                 player.up = 0
 
-    player.update(dt)
 
-    handle_player(player, speed_mod)
-
-    for proj in client_projectile:
-        proj.update(dt)
-        if proj.rect.collidelist(obstacles) != -1:
-            if proj.type == "damage":
-                client_projectile.remove(proj)
-            if proj.type == "slow":
-                if proj.speed != 0:
-                    proj.speed = 0
-                    proj.sizeUp()
-                else:
-                    if proj.kill:
-                        client_projectile.remove(proj)
-        elif proj.rect.x < 0 or proj.rect.x + proj.rect.width > 1280 or proj.rect.y < 0 or proj.rect.y + proj.rect.height > 800:
-            client_projectile.remove(proj)
-
-    map_system.handle_fog(map_system.getEntityNode(player), player.vision)
-    # fill the screen with a color to wipe away anything from last frame
+##########################################################
+    #DRAWING
     screen.blit(game_map, (0, 0))
-
-    #Drawing all players and their health bars
-    #Note that the main player character will not be covered by fog
 
     for entity in current_players:
         if entity is not client_id:
@@ -520,13 +585,15 @@ while in_game:
                         elif proj.phase == 2:
                             proj.draw_image(slow_phase_2)
                             proj.draw()
+                    elif proj.name_id == 4:
+                            proj.draw()
                     else:
                         if isEnemy(entity):
                             proj.set_color(True)
                         proj.draw()
 
 
-    for proj in client_projectile:
+    for proj in player.get_projectile():
         if proj.name_id == 2:
             proj.draw_image(bullet)
         elif proj.name_id == 3:
@@ -535,6 +602,9 @@ while in_game:
             elif proj.phase == 2:
                 proj.draw_image(slow_phase_2)
                 proj.draw()
+        elif proj.name_id == 4:
+            if player.isAttacking:
+                proj.draw()
         else:
             proj.draw()
 
@@ -542,18 +612,10 @@ while in_game:
     for entity in current_players:
         if entity is not client_id:
             if entity in player_characters and entity in server_packet:
-                match player_characters[entity]:
-                    case "mage":
-                        _image = mage
-                    case "soldier":
-                        _image = soldier
-                    case "alien":
-                        _image = alien
-                    case _:
-                        _image = default_player
+                image = get_character_image(player_characters[entity], server_packet[entity]["state"])
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
-                screen.blit(_image, (x,y))
+                screen.blit(image, (x,y))
                 border = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 11, 34, 7)
                 current_hp = server_packet[entity]["hp"] * 32
                 current_hp_rect = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 10, current_hp, 5)
@@ -563,6 +625,7 @@ while in_game:
                 else:
                     pygame.draw.rect(screen, "green", current_hp_rect)
 
+    player_image = get_character_image(character_choice, player.state)
     screen.blit(player_image, (player.rect.x, player.rect.y))
     border = pygame.rect.Rect(player.rect.x, player.rect.y - 11, 34, 7)
     current_hp = get_hp_percent() * 32
@@ -572,20 +635,33 @@ while in_game:
     #Drawing fog of war
     map_system.draw()
 
-    #Test Drawing
-    if show_grid:
-        for i in map_system.nodes:
-            for _node in i:
-                pygame.draw.rect(screen, "red", _node.rect, 1)
-    for _ in obstacles:
-        pygame.draw.rect(screen, "black", _, 2)
+    team_1_progress_bar = pygame.rect.Rect(96, 0, 320, 32)
+    team_2_progress_bar = pygame.rect.Rect(864, 768, 320, 32)
+    team_1_progress = pygame.rect.Rect(96, 0, (team_1_point/win_condition) * 320, 32)
+    team_2_progress = pygame.rect.Rect(864, 768, (team_2_point / win_condition) * 320, 32)
 
+    pygame.draw.rect(screen, "blue", team_1_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_1_progress)
+    pygame.draw.rect(screen, "blue", team_2_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_2_progress)
 
+    if team_1_point >= 100 or team_2_point >= 100:
+        if team_1_point > team_2_point:
+            winner = "Team 1"
+        else:
+            winner = "Team 2"
+        in_game = False
 
     # flip() the display to put your work on screen
     pygame.display.flip()
 
     dt = clock.tick(30) / 1000
+
+win_image = None
+if winner == "Team 1":
+    win_image = pygame.image.load("asset/team_1.png")
+else:
+    win_image = pygame.image.load("asset/team_2.png")
 
 while in_winner_screen:
 
@@ -596,7 +672,7 @@ while in_winner_screen:
             if event.key == pygame.K_ESCAPE:
                 in_winner_screen = False
 
-    screen.blit(game_map, (0, 0))
+    screen.blit(win_image, (0, 0))
     pygame.display.flip()
 
 pygame.quit()

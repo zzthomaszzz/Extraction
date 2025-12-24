@@ -24,12 +24,15 @@ class Projectile:
 class Bullet(Projectile):
 
     def __init__(self, x, y, destination, owner):
-        super().__init__(x, y, 5, "damage", owner)
+        super().__init__(x, y, 5, ["damage"], owner)
         self.direction = [0.0,0.0]
         self.speed = 800
-        self.type_value = 50
+        self.damage = 30
         self.set_direction(destination)
         self.name_id = 2
+
+    def set_damage(self, damage):
+        self.damage = damage
 
     def set_direction(self, target_destination):
         x_axis = target_destination[0] - self.rect.centerx
@@ -47,23 +50,22 @@ class Bullet(Projectile):
     def draw(self):
         pygame.draw.rect(pygame.display.get_surface(), self.color, self.rect, 1)
 
-class SlowZone(Projectile):
+class FireZone(Projectile):
     def __init__(self, x, y, destination, owner):
-        super().__init__(x, y, 16, "slow", owner)
+        super().__init__(x, y, 16, ["slow","damage"], owner)
         self.direction = [0.0,0.0]
         self.speed = 100
-        self.type_value = 0.5
+        self.slow = 0.5
+        self.damage = 25
+        self.phase = 1
         self.set_direction(destination)
         self.name_id = 3
 
-        self.phase = 1
-        self.linger = 10
-        self.linger_count = 0
-        self.kill = False
+    def set_damage(self, value):
+        self.damage += value
 
-    def sizeUp(self):
-        self.phase = 2
-        self.rect.size = (128, 128)
+    def set_size(self, value):
+        self.rect.size = (value, value)
         self.rect.center = (self.rect.x, self.rect.y)
 
     def set_direction(self, target_destination):
@@ -79,15 +81,18 @@ class SlowZone(Projectile):
         if self.speed != 0:
             self.rect.x += self.direction[0] * self.speed * dt
             self.rect.y += self.direction[1] * self.speed * dt
-        else:
-            self.linger_count += dt
-            if self.linger_count > self.linger:
-                self.kill = True
-    def set_color(self, enemy = False):
-        if not enemy:
-            self.color = "green"
-        else:
-            self.color = "orange"
 
     def draw(self):
         pygame.draw.rect(pygame.display.get_surface(), "orange", self.rect, 1)
+
+class Spike(Projectile):
+    def __init__(self, x, y, owner):
+        super().__init__(x, y, 64, ["damage"], owner)
+        self.name_id = 4
+        self.damage = 40
+
+    def set_pos(self, x, y):
+        self.rect.center = (x, y)
+
+    def draw(self):
+        pygame.draw.rect(pygame.display.get_surface(), "green", self.rect, 1)
