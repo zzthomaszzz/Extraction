@@ -173,7 +173,10 @@ class Soldier(Player):
                     self.health -= self.max_health * self.health_cost
 
     def get_projectile(self):
-        return self.projectile
+        data = []
+        for proj in self.projectile:
+            data.append(proj.to_string())
+        return data
 
 class Alien(Player):
 
@@ -282,7 +285,7 @@ class Alien(Player):
 
     def get_projectile(self):
         if self.isAttacking:
-            return [self.projectile]
+            return [self.projectile.to_string()]
         return []
 
 class Mage(Player):
@@ -313,19 +316,16 @@ class Mage(Player):
 
     def primary(self,location):
         if self.primary_state == 1 and self.projectile == []:
-            print("Phase 2")
             fire_zone = FireZone(self.rect.centerx, self.rect.centery, location, self.id)
             self.projectile.append(fire_zone)
             self.primary_state = 2
         elif self.primary_state == 2:
-            print("Phase 3")
             fire_zone = self.projectile[0]
             fire_zone.speed = 0
             fire_zone.set_size(128)
             self.primary_state = 3
             self.projectile[0].phase = 2
         elif self.primary_state == 3:
-            print("Phase 1")
             self.projectile = []
             self.primary_state = 1
 
@@ -384,5 +384,8 @@ class Mage(Player):
         super().update(dt)
 
     def get_projectile(self):
-        return self.projectile
+        data = []
+        for proj in self.projectile:
+            data.append(proj.to_string())
+        return data
 

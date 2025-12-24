@@ -12,12 +12,6 @@ class Projectile:
         self.color = (0, 0, 0)
         self.id = owner
 
-    def set_color(self, enemy = False):
-        if not enemy:
-            self.color = "green"
-        else:
-            self.color = "red"
-
     def draw_image(self, image):
         pygame.display.get_surface().blit(image, self.rect)
 
@@ -47,8 +41,8 @@ class Bullet(Projectile):
         self.rect.x += self.direction[0] * self.speed * dt
         self.rect.y += self.direction[1] * self.speed * dt
 
-    def draw(self):
-        pygame.draw.rect(pygame.display.get_surface(), self.color, self.rect, 1)
+    def to_string(self):
+     return str(self.name_id) + " " + str(self.rect.x) + " " + str(self.rect.y)
 
 class FireZone(Projectile):
     def __init__(self, x, y, destination, owner):
@@ -65,8 +59,9 @@ class FireZone(Projectile):
         self.damage += value
 
     def set_size(self, value):
+        center = self.rect.center
         self.rect.size = (value, value)
-        self.rect.center = (self.rect.x, self.rect.y)
+        self.rect.center = center
 
     def set_direction(self, target_destination):
         x_axis = target_destination[0] - self.rect.centerx
@@ -82,8 +77,8 @@ class FireZone(Projectile):
             self.rect.x += self.direction[0] * self.speed * dt
             self.rect.y += self.direction[1] * self.speed * dt
 
-    def draw(self):
-        pygame.draw.rect(pygame.display.get_surface(), "orange", self.rect, 1)
+    def to_string(self):
+     return str(self.name_id) + " " + str(self.rect.x) + " " + str(self.rect.y) + " " + str(self.phase)
 
 class Spike(Projectile):
     def __init__(self, x, y, owner):
@@ -94,5 +89,5 @@ class Spike(Projectile):
     def set_pos(self, x, y):
         self.rect.center = (x, y)
 
-    def draw(self):
-        pygame.draw.rect(pygame.display.get_surface(), "green", self.rect, 1)
+    def to_string(self):
+     return str(self.name_id) + " " + str(self.rect.x) + " " + str(self.rect.y)
