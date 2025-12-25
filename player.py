@@ -146,6 +146,7 @@ class Soldier(Player):
         self.health = soldier_health
         self.speed = soldier_speed
         self.vision = soldier_vision
+        self.max_health = soldier_health
 
         #Primary stats
         self.attack_on_cooldown = False
@@ -261,6 +262,7 @@ class Alien(Player):
         self.health = alien_health
         self.speed = alien_speed
         self.vision = alien_vision
+        self.max_health = alien_health
 
         #PASSIVE
         self.damage_reduction = alien_damage_reduction
@@ -374,6 +376,7 @@ class Mage(Player):
         self.health = mage_health
         self.speed = mage_speed
         self.vision = mage_vision
+        self.max_health = mage_health
 
         #PRIMARY
         self.primary_state = 1
@@ -490,6 +493,7 @@ class MedicSniper(Player):
         self.health = medic_health
         self.speed = medic_speed
         self.vision = medic_vision
+        self.max_health = medic_health
 
         #PRIMARY
         self.attack_on_cooldown = False
@@ -506,6 +510,14 @@ class MedicSniper(Player):
         self.take_aim_cooldown = medic_take_aim_cooldown
         self.take_aim_cooldown_counter = 0.0
 
+    def death(self):
+        super().death()
+        self.isTakeAim = False
+        self.isCooldown = False
+        self.take_aim_cooldown_counter = 0.0
+        self.attack_speed_counter = 0.0
+        self.attack_on_cooldown = False
+
     def get_damage_dealt(self, enemy, position):
         damage = []
         for key, value in position.items():
@@ -515,9 +527,10 @@ class MedicSniper(Player):
                 rect = pygame.rect.Rect(x, y, 32, 32)
                 proj_list = self.projectile
                 for proj in proj_list:
-                    if proj.id == 2 and rect.clipline(proj.get_trace_line):
-                        damage.append([key, proj.damage])
-                        self.projectile.remove(proj)
+                    if proj.id == 2:
+                        if rect.clipline(proj.get_trace_line()):
+                            damage.append([key, proj.damage])
+                            self.projectile.remove(proj)
         return damage
 
     def get_heal_applied(self, ally, position):
