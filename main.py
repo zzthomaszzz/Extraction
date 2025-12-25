@@ -7,7 +7,7 @@ from mapSystem import MapSystem
 from player import *
 from projectile import *
 
-host = "team-las.aus.at.playit.plus"
+host = "127.0.0.1"
 port = 5000
 
 try:
@@ -51,20 +51,25 @@ def get_hp_percent():
 def get_character_image(name, state=1):
     match name:
         case "mage":
-            data = mage
+            _image = mage
         case "soldier":
             if state == 1:
-                data = soldier
+                _image = soldier
             elif state == 2:
-                data = soldier_boost
+                _image = soldier_boost
         case "alien":
             if state == 1:
-                data = alien
+                _image = alien
             elif state == 2:
-                data = alien_rage
+                _image = alien_rage
+        case "medic sniper":
+            if state == 1:
+                _image = medic_sniper
+            elif state == 2:
+                _image = medic_sniper_offensive
         case _:
-            data = default_player
-    return data
+            _image = default_player
+    return _image
 
 def to_color(number):
     match number:
@@ -92,6 +97,8 @@ def use_primary():
             player.primary(pygame.mouse.get_pos())
         case "alien":
             player.primary()
+        case "medic sniper":
+            player.primary(pygame.mouse.get_pos())
         case _:
             pass
 
@@ -102,6 +109,8 @@ def use_secondary():
         case "mage":
             player.secondary(map_system.getNodeFromPos(pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1]))
         case "alien":
+            player.secondary()
+        case "medic sniper":
             player.secondary()
         case _:
             pass
@@ -119,14 +128,14 @@ soldier_boost = pygame.image.load("asset/soldier_boostt.png")
 alien = pygame.image.load("asset/alien.png")
 alien_rage = pygame.image.load("asset/alien_rage.png")
 mage = pygame.image.load("asset/mage.png")
+medic_sniper = pygame.image.load("asset/medic_sniper.png")
+medic_sniper_offensive = pygame.image.load("asset/medic_sniper_offense.png")
 default_player = pygame.image.load("asset/default_player.png")
 bullet = pygame.image.load("asset/bullet.png")
 slow_phase_1 = pygame.image.load("asset/slow_1.png")
 slow_phase_2 = pygame.image.load("asset/slow_2.png")
 claw = pygame.image.load("asset/claw.png")
-
-character_choice = None
-team_choice = None
+med_bullet = pygame.image.load("asset/med_bullet.png")
 
 team_holder = [
     [pygame.rect.Rect(160, 608, 192, 64), 1],
@@ -137,6 +146,7 @@ character_holder = [
     [pygame.rect.Rect(608, 480, 64, 64), "soldier"],
     [pygame.rect.Rect(736, 480, 64, 64), "mage"],
     [pygame.rect.Rect(480, 480, 64, 64), "alien"],
+    [pygame.rect.Rect(352, 480, 64, 64), "medic sniper"]
 ]
 
 ready_holder = pygame.rect.Rect(480, 672, 320, 64)
@@ -180,16 +190,40 @@ screen = pygame.display.set_mode((1280, 800))
 clock = pygame.time.Clock()
 in_lobby = True
 
+character_choice = None
+team_choice = None
+ready_status = False
+team_1 = []
+team_2 = []
+characters = {}
 #-----------------------------------------------------------------------------------------------------------------------
 # LOBBY
 while in_lobby:
 
-    team_1 = client.get(["team 1"])
-    team_2 = client.get(["team 2"])
+    packet = {
+        "team": team_choice,
+        "character": character_choice,
+        "ready": ready_status,
+    }
 
-    characters = client.get(["all player character"])
+    lobby_data = client.get(["lobby", packet])
 
-    ready = client.get(["ready status"])
+    team_1 = lobby_data["team 1"]
+    team_2 = lobby_data["team 2"]
+    characters = lobby_data["characters"]
+    ready = lobby_data["ready"]
+
+    if lobby_data["start"]:
+        in_lobby = False
+
+    if client_id in team_1:
+        team_choice = 1
+    elif client_id in team_2:
+        team_choice = 2
+    if client_id in characters:
+        character_choice = characters[client_id]
+
+    clock.tick(30)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -202,19 +236,13 @@ while in_lobby:
                         for spawning_zone in team_holder:
                             if spawning_zone[0].collidepoint(pygame.mouse.get_pos()):
                                 team_choice = spawning_zone[1]
-                                client.send(["team choice", team_choice])
                         for character in character_holder:
                             if character[0].collidepoint(pygame.mouse.get_pos()):
                                 character_choice = character[1]
-                                client.send(["character choice", character_choice])
                         if ready_holder.collidepoint(pygame.mouse.get_pos()):
                             if character_choice is not None and team_choice is not None:
-                                client.send(["ready"])
+                                ready_status = True
 
-    start = client.get(["game start"])
-    if start:
-        in_lobby = False
-    clock.tick(30)
 
     screen.blit(lobby, (0, 0))
 
@@ -316,7 +344,6 @@ obstacles = [
     pygame.rect.Rect(480, 256, 63, 63),
     pygame.rect.Rect(512, 384, 31, 31),
     pygame.rect.Rect(576, 320, 63, 31),
-    pygame.rect.Rect(544, 448, 63, 31),
     pygame.rect.Rect(512, 480, 63, 63),
     pygame.rect.Rect(480, 672, 127, 31),
     pygame.rect.Rect(512, 704, 31, 31),
@@ -333,7 +360,6 @@ obstacles = [
     pygame.rect.Rect(832, 288, 31, 31),
     pygame.rect.Rect(768, 192, 31, 31),
     pygame.rect.Rect(1024, 224, 63, 63),
-    pygame.rect.Rect(672, 256, 63, 31),
     pygame.rect.Rect(608, 64, 95, 63),
     pygame.rect.Rect(768, 64, 95, 63),
     pygame.rect.Rect(1024, 96, 63, 63),
@@ -358,25 +384,19 @@ if team_choice is None or character_choice is None:
 
 match character_choice:
     case "mage":
-        player_image = mage
         player = Mage(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
     case "soldier":
-        player_image = soldier
         player = Soldier(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
     case "alien":
-        player_image = alien
         player = Alien(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
+    case "medic sniper":
+        player = MedicSniper(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
     case _:
-        player_image = default_player
         player = Player(client_id, [spawn_zone[team_choice - 1].centerx, spawn_zone[team_choice - 1].centery])
-
-team_1 = client.get(["team 1"])
-team_2 = client.get(["team 2"])
-
 
 damage_dealt = []
 slow_applied = []
-
+heal_applied = []
 
 map_system = MapSystem(1280, 800, obstacles, spawn_zone)
 
@@ -420,10 +440,8 @@ def adjust_vertical(_player, _obstacle_list):
 #Where the server data will come through
 
 current_players = client.get(["all active player", player.id])
-print(current_players)
-
-player_characters = client.get(["all player character", player.id])
-print(player_characters)
+enemyTeam = getEnemyTeam()
+allyTeam = getAllyTeam()
 
 point = 0
 
@@ -446,6 +464,16 @@ dt = 0
 
 #-----------------------------------------------------------------------------------------------------------------------
 #GAME
+
+def get_heal_received(_packet):
+    total_heal = 0
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            heal = value["heal"]
+            for instance in heal:
+                if instance[0] == client_id:
+                    total_heal += instance[1]
+    return total_heal
 
 def get_damage_received(_packet):
     total_damage = 0
@@ -502,6 +530,11 @@ def draw_fire_zone(string):
     elif _phase == 2:
         screen.blit(slow_phase_2, (_x, _y))
 
+def draw_medic_bullet(string):
+    _, _x, _y = string.split()
+    _x, _y = float(_x), float(_y)
+    screen.blit(med_bullet, (_x, _y))
+
 def draw_progress_bar():
     team_1_progress_bar = pygame.rect.Rect(96, 0, 320, 32)
     team_2_progress_bar = pygame.rect.Rect(864, 768, 320, 32)
@@ -530,6 +563,7 @@ while in_game:
         "state": player.state,
         "dmg": damage_dealt,
         "slow": slow_applied,
+        "heal": heal_applied,
         "point": point
     }
 
@@ -539,16 +573,23 @@ while in_game:
 
     speed_mod = get_slow_received(server_packet)
     dmg_received = get_damage_received(server_packet)
-    enemyTeam = getEnemyTeam()
-    allyTeam = getAllyTeam()
+    heal_received = get_heal_received(server_packet)
+
     player_pos = get_positions(server_packet)
     slow_applied = player.get_slow_applied(enemyTeam, allyTeam, player_pos)
     damage_dealt = player.get_damage_dealt(enemyTeam, player_pos)
+    heal_applied = player.get_heal_applied(allyTeam, player_pos)
 
     player.update(dt)
+
     update_team_points(server_packet)
+
+    player.heal(heal_received)
+
     player.take_damage(dmg_received)
+
     handle_player(player, speed_mod)
+
     player.update_projectile(dt, obstacles)
 
     if player.rect.colliderect(capture_zone):
@@ -608,35 +649,39 @@ while in_game:
         if entity is not client_id:
             if entity in server_packet:
                 for proj in server_packet[entity]["proj"]:
-                    name_id = int(proj[0])
-                    match name_id:
+                    _id = int(proj[0])
+                    match _id:
                         case 2:
                             draw_bullet(proj)
                         case 3:
                             draw_fire_zone(proj)
                         case 4:
                             draw_claw(proj)
+                        case 5:
+                            draw_medic_bullet(proj)
                         case _:
                             pass
 
 
     for proj in player.get_projectile():
-        name_id = int(proj[0])
-        match name_id:
+        _id = int(proj[0])
+        match _id:
             case 2:
                 draw_bullet(proj)
             case 3:
                 draw_fire_zone(proj)
             case 4:
                 draw_claw(proj)
+            case 5:
+                draw_medic_bullet(proj)
             case _:
                 pass
 
 
     for entity in current_players:
         if entity is not client_id:
-            if entity in player_characters and entity in server_packet:
-                image = get_character_image(player_characters[entity], server_packet[entity]["state"])
+            if entity in characters and entity in server_packet:
+                image = get_character_image(characters[entity], server_packet[entity]["state"])
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
                 screen.blit(image, (x,y))

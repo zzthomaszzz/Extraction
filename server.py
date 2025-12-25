@@ -3,33 +3,23 @@ import sys
 import threading
 import pickle
 import random
-from time import sleep
 
 MAX_PLAYER = 6
 
-#Client data
-
-#Contains ID only
 current_players = []
 
-#Contains ID:Character name in string
-player_characters = {}
+game_packet = {"team 1": 0.0, "team 2": 0.0}
 
-data_packet = {"team 1": 0.0, "team 2": 0.0}
+lobby_packet = {"team 1": [], "team 2": [], "characters": {}, "ready": {}, "start": False}
 
-ready_status = {}
-team_1 = []
-team_2 = []
 
-GAME_START = False
-SERVER_TICK = 0
 #Team Data
 
 def handle_client(client, address, _id):
     print(f"Accepted connection from {address}, id: {_id}")
     #
     current_players.append(_id)
-    ready_status[_id] = False
+    lobby_packet["ready"][_id] = False
 
     # Run once data goes here
     initialize_data = client.recv(4096)
@@ -53,66 +43,68 @@ def handle_client(client, address, _id):
 
 def remove(_id):
     current_players.remove(_id)
-    if _id in player_characters:
-        del player_characters[_id]
-    if _id in team_1:
-        team_1.remove(_id)
-    if _id in team_2:
-        team_2.remove(_id)
-    if _id in ready_status:
-        del ready_status[_id]
+    if _id in lobby_packet["team 1"]:
+        lobby_packet["team 1"].remove(_id)
+    if _id in lobby_packet["team 2"]:
+        lobby_packet["team 2"].remove(_id)
+    if _id in lobby_packet["ready"]:
+        del lobby_packet["ready"][_id]
+    if _id in lobby_packet["characters"]:
+        del lobby_packet["characters"][_id]
 
 def process_data(data, _id):
     match data[0]:
+        case "lobby":
+            if data[1]["team"] is not None:
+                team = data[1]["team"]
+                team_1 = lobby_packet["team 1"]
+                team_2 = lobby_packet["team 2"]
+                if team == 1 and _id not in team_1 and len(team_1) < 3:
+                    lobby_packet["team 1"].append(_id)
+                    if _id in team_2:
+                        lobby_packet["team 2"].remove(_id)
+                elif team == 2 and _id not in team_2 and len(team_2) < 3:
+                    lobby_packet["team 2"].append(_id)
+                    if _id in team_1:
+                        lobby_packet["team 1"].remove(_id)
+            if data[1]["character"] is not None:
+                lobby_packet["characters"][_id] = data[1]["character"]
+            if data[1]["ready"]:
+                lobby_packet["ready"][_id] = True
+                lobby_packet["start"] = True
+                for player in current_players:
+                    if player in lobby_packet["ready"]:
+                        if not lobby_packet["ready"][player]:
+                            lobby_packet["start"] = False
+            return lobby_packet
+
         case "packet":
             if data[1]["point"] != 0:
+                team_1 = lobby_packet["team 1"]
+                team_2 = lobby_packet["team 2"]
                 if _id in team_1:
-                    data_packet["team 1"] += data[1]["point"]
-                    if data_packet["team 1"] < 0:
-                        data_packet["team 1"] = 0
+                    game_packet["team 1"] += data[1]["point"]
+                    if game_packet["team 1"] < 0:
+                        game_packet["team 1"] = 0
                 elif _id in team_2:
-                    data_packet["team 2"] += data[1]["point"]
-                    if data_packet["team 2"] < 0:
-                        data_packet["team 2"] = 0
-            data_packet[_id] = data[1]
-            print(sys.getsizeof(pickle.dumps(data_packet)))
-            return data_packet
+                    game_packet["team 2"] += data[1]["point"]
+                    if game_packet["team 2"] < 0:
+                        game_packet["team 2"] = 0
+            game_packet[_id] = data[1]
+            print(sys.getsizeof(pickle.dumps(game_packet)))
+            return game_packet
         case "all active player":
             return current_players
-        case "all player character":
-            return player_characters
-        case "character choice":
-            player_characters[_id] = data[1]
-        case "team choice":
-            choice = data[1]
-            if choice == 1 and _id not in team_1 and len(team_1) < 3:
-                team_1.append(_id)
-                if _id in team_2:
-                    team_2.remove(_id)
-            if choice == 2 and _id not in team_2 and len(team_2) < 3:
-                team_2.append(_id)
-                if _id in team_1:
-                    team_1.remove(_id)
-        case "team 1":
-            return team_1
-        case "team 2":
-            return team_2
-        case "ready":
-            ready_status[_id] = True
-            global GAME_START
-            GAME_START = True
-            for player in current_players:
-                if player in ready_status:
-                    if not ready_status[player]:
-                        GAME_START = False
-        case "ready status":
-            return ready_status
-        case "game start":
-            return GAME_START
         case "initialize":
             return _id
         case _:
             return data
+
+def get_assignable_id(taken_id_list):
+    assignable_id = [1, 2, 3, 4, 5, 6]
+    for _id in taken_id_list:
+        assignable_id.remove(_id)
+    return assignable_id
 
 def start_server():
     host = ""
@@ -124,24 +116,15 @@ def start_server():
     server_socket.settimeout(10)
 
     print(f"Server listening on {host}:{port}")
-    while not GAME_START:
-        if len(current_players) < 6:
-            available_id = {1, 2, 3, 4, 5, 6}
-            taken_id = {0}
-            for _id in available_id:
-                if _id in current_players:
-                    taken_id.add(_id)
-            valid_options = available_id - taken_id
-            valid_options = list(valid_options)
-            client_id = random.choice(valid_options)
-            try:
-                client_socket, addr = server_socket.accept()
-            except socket.timeout:
-                continue
-            client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
-            client_thread.start()
-        else:
-            sleep(1)
+    while not lobby_packet["start"]:
+        available_id = get_assignable_id(current_players)
+        client_id = random.choice(available_id)
+        try:
+            client_socket, addr = server_socket.accept()
+        except socket.timeout:
+            continue
+        client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, client_id))
+        client_thread.start()
     server_socket.close()
     print("Server stopped listening for connection")
 
