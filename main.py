@@ -7,7 +7,7 @@ from mapSystem import MapSystem
 from player import *
 from projectile import *
 
-host = "127.0.0.1"
+host = "team-las.aus.at.playit.plus"
 port = 5000
 
 try:
@@ -123,6 +123,7 @@ default_player = pygame.image.load("asset/default_player.png")
 bullet = pygame.image.load("asset/bullet.png")
 slow_phase_1 = pygame.image.load("asset/slow_1.png")
 slow_phase_2 = pygame.image.load("asset/slow_2.png")
+claw = pygame.image.load("asset/claw.png")
 
 character_choice = None
 team_choice = None
@@ -438,7 +439,7 @@ team_2_point = 0.0
 win_condition = 100
 
 heal_zone_heal_per_second = 100
-point_per_second = 20
+point_per_second = 1
 
 in_game = True
 dt = 0
@@ -483,6 +484,35 @@ def update_team_points(_packet):
         if key == "team 2":
             team_2_point = value
 
+def draw_bullet(string):
+    _, _x, _y = string.split()
+    _x, _y = float(_x), float(_y)
+    screen.blit(bullet, (_x, _y))
+
+def draw_claw(string):
+    _, _x, _y = string.split()
+    _x, _y = float(_x), float(_y)
+    screen.blit(claw, (_x, _y))
+
+def draw_fire_zone(string):
+    _, _x, _y, _phase = string.split()
+    _x, _y, _phase = float(_x), float(_y), int(_phase)
+    if _phase == 1:
+        screen.blit(slow_phase_1, (_x, _y))
+    elif _phase == 2:
+        screen.blit(slow_phase_2, (_x, _y))
+
+def draw_progress_bar():
+    team_1_progress_bar = pygame.rect.Rect(96, 0, 320, 32)
+    team_2_progress_bar = pygame.rect.Rect(864, 768, 320, 32)
+    team_1_progress = pygame.rect.Rect(96, 0, (team_1_point / win_condition) * 320, 32)
+    team_2_progress = pygame.rect.Rect(864, 768, (team_2_point / win_condition) * 320, 32)
+
+    pygame.draw.rect(screen, "blue", team_1_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_1_progress)
+    pygame.draw.rect(screen, "blue", team_2_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_2_progress)
+
 while in_game:
 
     if player.isDead:
@@ -511,8 +541,9 @@ while in_game:
     dmg_received = get_damage_received(server_packet)
     enemyTeam = getEnemyTeam()
     allyTeam = getAllyTeam()
-    player_data = get_positions(server_packet)
-    slow_applied, damage_dealt = player.process_projectiles(enemyTeam, allyTeam, player_data)
+    player_pos = get_positions(server_packet)
+    slow_applied = player.get_slow_applied(enemyTeam, allyTeam, player_pos)
+    damage_dealt = player.get_damage_dealt(enemyTeam, player_pos)
 
     player.update(dt)
     update_team_points(server_packet)
@@ -577,36 +608,29 @@ while in_game:
         if entity is not client_id:
             if entity in server_packet:
                 for proj in server_packet[entity]["proj"]:
-                    if proj.name_id == 2:
-                        proj.draw_image(bullet)
-                    elif proj.name_id == 3:
-                        if proj.phase == 1:
-                            proj.draw_image(slow_phase_1)
-                        elif proj.phase == 2:
-                            proj.draw_image(slow_phase_2)
-                            proj.draw()
-                    elif proj.name_id == 4:
-                            proj.draw()
-                    else:
-                        if isEnemy(entity):
-                            proj.set_color(True)
-                        proj.draw()
+                    name_id = int(proj[0])
+                    match name_id:
+                        case 2:
+                            draw_bullet(proj)
+                        case 3:
+                            draw_fire_zone(proj)
+                        case 4:
+                            draw_claw(proj)
+                        case _:
+                            pass
 
 
     for proj in player.get_projectile():
-        if proj.name_id == 2:
-            proj.draw_image(bullet)
-        elif proj.name_id == 3:
-            if proj.phase == 1:
-                proj.draw_image(slow_phase_1)
-            elif proj.phase == 2:
-                proj.draw_image(slow_phase_2)
-                proj.draw()
-        elif proj.name_id == 4:
-            if player.isAttacking:
-                proj.draw()
-        else:
-            proj.draw()
+        name_id = int(proj[0])
+        match name_id:
+            case 2:
+                draw_bullet(proj)
+            case 3:
+                draw_fire_zone(proj)
+            case 4:
+                draw_claw(proj)
+            case _:
+                pass
 
 
     for entity in current_players:
@@ -616,7 +640,6 @@ while in_game:
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
                 screen.blit(image, (x,y))
-                border = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 11, 34, 7)
                 current_hp = server_packet[entity]["hp"] * 32
                 current_hp_rect = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 10, current_hp, 5)
                 pygame.draw.rect(screen, to_color(entity), current_hp_rect)
@@ -627,7 +650,6 @@ while in_game:
 
     player_image = get_character_image(character_choice, player.state)
     screen.blit(player_image, (player.rect.x, player.rect.y))
-    border = pygame.rect.Rect(player.rect.x, player.rect.y - 11, 34, 7)
     current_hp = get_hp_percent() * 32
     current_hp_rect = pygame.rect.Rect(player.rect.x, player.rect.y - 10, current_hp, 5)
     pygame.draw.rect(screen, to_color(client_color), current_hp_rect)
@@ -635,15 +657,7 @@ while in_game:
     #Drawing fog of war
     map_system.draw()
 
-    team_1_progress_bar = pygame.rect.Rect(96, 0, 320, 32)
-    team_2_progress_bar = pygame.rect.Rect(864, 768, 320, 32)
-    team_1_progress = pygame.rect.Rect(96, 0, (team_1_point/win_condition) * 320, 32)
-    team_2_progress = pygame.rect.Rect(864, 768, (team_2_point / win_condition) * 320, 32)
-
-    pygame.draw.rect(screen, "blue", team_1_progress_bar, 2)
-    pygame.draw.rect(screen, "orange", team_1_progress)
-    pygame.draw.rect(screen, "blue", team_2_progress_bar, 2)
-    pygame.draw.rect(screen, "orange", team_2_progress)
+    draw_progress_bar()
 
     if team_1_point >= 100 or team_2_point >= 100:
         if team_1_point > team_2_point:

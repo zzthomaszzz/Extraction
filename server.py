@@ -1,4 +1,5 @@
 import socket
+import sys
 import threading
 import pickle
 import random
@@ -65,7 +66,6 @@ def process_data(data, _id):
     match data[0]:
         case "packet":
             if data[1]["point"] != 0:
-                print(data[1]["point"])
                 if _id in team_1:
                     data_packet["team 1"] += data[1]["point"]
                     if data_packet["team 1"] < 0:
@@ -75,6 +75,7 @@ def process_data(data, _id):
                     if data_packet["team 2"] < 0:
                         data_packet["team 2"] = 0
             data_packet[_id] = data[1]
+            print(sys.getsizeof(pickle.dumps(data_packet)))
             return data_packet
         case "all active player":
             return current_players
