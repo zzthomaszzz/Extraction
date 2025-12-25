@@ -502,6 +502,17 @@ def draw_fire_zone(string):
     elif _phase == 2:
         screen.blit(slow_phase_2, (_x, _y))
 
+def draw_progress_bar():
+    team_1_progress_bar = pygame.rect.Rect(96, 0, 320, 32)
+    team_2_progress_bar = pygame.rect.Rect(864, 768, 320, 32)
+    team_1_progress = pygame.rect.Rect(96, 0, (team_1_point / win_condition) * 320, 32)
+    team_2_progress = pygame.rect.Rect(864, 768, (team_2_point / win_condition) * 320, 32)
+
+    pygame.draw.rect(screen, "blue", team_1_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_1_progress)
+    pygame.draw.rect(screen, "blue", team_2_progress_bar, 2)
+    pygame.draw.rect(screen, "orange", team_2_progress)
+
 while in_game:
 
     if player.isDead:
@@ -530,8 +541,9 @@ while in_game:
     dmg_received = get_damage_received(server_packet)
     enemyTeam = getEnemyTeam()
     allyTeam = getAllyTeam()
-    player_data = get_positions(server_packet)
-    slow_applied, damage_dealt = player.process_projectiles(enemyTeam, allyTeam, player_data)
+    player_pos = get_positions(server_packet)
+    slow_applied = player.get_slow_applied(enemyTeam, allyTeam, player_pos)
+    damage_dealt = player.get_damage_dealt(enemyTeam, player_pos)
 
     player.update(dt)
     update_team_points(server_packet)
@@ -597,8 +609,6 @@ while in_game:
             if entity in server_packet:
                 for proj in server_packet[entity]["proj"]:
                     name_id = int(proj[0])
-                    print(proj)
-                    print(name_id)
                     match name_id:
                         case 2:
                             draw_bullet(proj)
@@ -630,7 +640,6 @@ while in_game:
                 x = server_packet[entity]["x"]
                 y = server_packet[entity]["y"]
                 screen.blit(image, (x,y))
-                border = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 11, 34, 7)
                 current_hp = server_packet[entity]["hp"] * 32
                 current_hp_rect = pygame.rect.Rect(server_packet[entity]["x"], server_packet[entity]["y"] - 10, current_hp, 5)
                 pygame.draw.rect(screen, to_color(entity), current_hp_rect)
@@ -641,7 +650,6 @@ while in_game:
 
     player_image = get_character_image(character_choice, player.state)
     screen.blit(player_image, (player.rect.x, player.rect.y))
-    border = pygame.rect.Rect(player.rect.x, player.rect.y - 11, 34, 7)
     current_hp = get_hp_percent() * 32
     current_hp_rect = pygame.rect.Rect(player.rect.x, player.rect.y - 10, current_hp, 5)
     pygame.draw.rect(screen, to_color(client_color), current_hp_rect)
@@ -649,15 +657,7 @@ while in_game:
     #Drawing fog of war
     map_system.draw()
 
-    team_1_progress_bar = pygame.rect.Rect(96, 0, 320, 32)
-    team_2_progress_bar = pygame.rect.Rect(864, 768, 320, 32)
-    team_1_progress = pygame.rect.Rect(96, 0, (team_1_point/win_condition) * 320, 32)
-    team_2_progress = pygame.rect.Rect(864, 768, (team_2_point / win_condition) * 320, 32)
-
-    pygame.draw.rect(screen, "blue", team_1_progress_bar, 2)
-    pygame.draw.rect(screen, "orange", team_1_progress)
-    pygame.draw.rect(screen, "blue", team_2_progress_bar, 2)
-    pygame.draw.rect(screen, "orange", team_2_progress)
+    draw_progress_bar()
 
     if team_1_point >= 100 or team_2_point >= 100:
         if team_1_point > team_2_point:

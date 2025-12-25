@@ -61,8 +61,11 @@ class Player:
     def update_projectile(self, dt, obstacles):
         pass
 
-    def process_projectiles(self, enemy, ally, position):
-        return [], []
+    def get_damage_dealt(self, enemy, position):
+        return []
+
+    def get_slow_applied(self, enemy, ally, position):
+        return []
 
     def get_projectile(self):
         return []
@@ -99,7 +102,7 @@ class Soldier(Player):
         self.adrenaline_cooldown_counter = 0.0
         self.adrenaline_counter = 0.0
 
-    def process_projectiles(self, enemy, ally, position):
+    def get_damage_dealt(self, enemy, position):
         damage = []
         for key, value in position.items():
             if key in enemy:
@@ -111,7 +114,7 @@ class Soldier(Player):
                     if proj.rect.colliderect(rect):
                         damage.append([key, proj.damage])
                         self.projectile.remove(proj)
-        return [], damage
+        return damage
 
     def update_projectile(self, dt, obstacles):
         for bullet in self.projectile:
@@ -157,11 +160,11 @@ class Soldier(Player):
     def primary(self, location):
         if not self.attack_on_cooldown:
             if self.isBoosted:
-                bullet = Bullet(self.rect.centerx, self.rect.centery, location, self.id)
+                bullet = Bullet(self.rect.centerx, self.rect.centery, location)
                 bullet.set_damage(bullet.damage * self.damage_multiplier)
                 self.projectile.append(bullet)
             else:
-                self.projectile.append(Bullet(self.rect.centerx, self.rect.centery, location, self.id))
+                self.projectile.append(Bullet(self.rect.centerx, self.rect.centery, location))
             self.attack_on_cooldown = True
 
     def secondary(self):
@@ -183,7 +186,7 @@ class Alien(Player):
     def __init__(self, _id, location):
         super().__init__(_id, location, 150, 450, 115)
         self.name = "alien"
-        self.projectile = Spike(self.rect.centerx, self.rect.centery, _id)
+        self.projectile = Spike(self.rect.centerx, self.rect.centery)
 
         #PASSIVE
         self.damage_reduction = 0.8
@@ -227,7 +230,7 @@ class Alien(Player):
             self.projectile.set_pos(self.rect.centerx, self.rect.centery)
             self.isAttackOnCooldown = True
 
-    def process_projectiles(self, enemy, ally, position):
+    def get_damage_dealt(self, enemy, position):
         damage = []
         for key, value in position.items():
             if key in enemy:
@@ -238,7 +241,7 @@ class Alien(Player):
                     damage.append([key, self.projectile.damage])
         if damage:
             self.isAttacking = False
-        return [], damage
+        return damage
 
     def take_damage(self, value):
         if not self.isRage:
@@ -316,7 +319,7 @@ class Mage(Player):
 
     def primary(self,location):
         if self.primary_state == 1 and self.projectile == []:
-            fire_zone = FireZone(self.rect.centerx, self.rect.centery, location, self.id)
+            fire_zone = FireZone(self.rect.centerx, self.rect.centery, location)
             self.projectile.append(fire_zone)
             self.primary_state = 2
         elif self.primary_state == 2:
@@ -337,6 +340,30 @@ class Mage(Player):
                     self.rect.center = node.rect.center
                     self.isCooldown = True
 
+    def get_damage_dealt(self, enemy, position):
+        damage = []
+        if self.primary_state == 3:
+            for key, value in position.items():
+                if key in enemy and self.isFireActive:
+                    x = value["x"]
+                    y = value["y"]
+                    rect = pygame.rect.Rect(x, y, 32, 32)
+                    if self.projectile[0].rect.colliderect(rect):
+                        damage.append([key, self.projectile[0].damage])
+        if damage:
+            self.isFireActive = False
+        return damage
+
+    def get_slow_applied(self, enemy, ally, position):
+        slow = []
+        if self.primary_state == 3:
+            for key, value in position.items():
+                x = value["x"]
+                y = value["y"]
+                rect = pygame.rect.Rect(x, y, 32, 32)
+                if self.projectile[0].rect.colliderect(rect):
+                    slow.append([key, self.projectile[0].slow])
+        return slow
 
     def update_projectile(self, dt, obstacles):
         if self.primary_state == 2:

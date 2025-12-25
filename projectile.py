@@ -4,21 +4,17 @@ import pygame
 
 class Projectile:
 
-    def __init__(self, x, y, size, _type, owner):
+    def __init__(self, x, y, size, _type):
         self.rect = pygame.rect.Rect(0, 0, size, size)
         self.type = _type
         self.name_id = 1
         self.rect.center = (x, y)
         self.color = (0, 0, 0)
-        self.id = owner
-
-    def draw_image(self, image):
-        pygame.display.get_surface().blit(image, self.rect)
 
 class Bullet(Projectile):
 
-    def __init__(self, x, y, destination, owner):
-        super().__init__(x, y, 5, ["damage"], owner)
+    def __init__(self, x, y, destination):
+        super().__init__(x, y, 5, ["damage"])
         self.direction = [0.0,0.0]
         self.speed = 800
         self.damage = 30
@@ -45,8 +41,8 @@ class Bullet(Projectile):
      return str(self.name_id) + " " + str(self.rect.x) + " " + str(self.rect.y)
 
 class FireZone(Projectile):
-    def __init__(self, x, y, destination, owner):
-        super().__init__(x, y, 16, ["slow","damage"], owner)
+    def __init__(self, x, y, destination):
+        super().__init__(x, y, 16, ["slow","damage"])
         self.direction = [0.0,0.0]
         self.speed = 100
         self.slow = 0.5
@@ -81,8 +77,8 @@ class FireZone(Projectile):
      return str(self.name_id) + " " + str(self.rect.x) + " " + str(self.rect.y) + " " + str(self.phase)
 
 class Spike(Projectile):
-    def __init__(self, x, y, owner):
-        super().__init__(x, y, 64, ["damage"], owner)
+    def __init__(self, x, y):
+        super().__init__(x, y, 64, ["damage"])
         self.name_id = 4
         self.damage = 40
 
