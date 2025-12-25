@@ -7,7 +7,7 @@ from mapSystem import MapSystem
 from player import *
 from projectile import *
 
-host = "127.0.0.1"
+host = "team-las.aus.at.playit.plus"
 port = 5000
 
 try:
