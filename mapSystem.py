@@ -31,11 +31,17 @@ class MapSystem:
                 x += 1
             y += 1
 
-    def draw(self):
+    def draw(self, revealed_node=None):
+        if revealed_node is None:
+            revealed_node = []
         for i in self.nodes:
             for node in i:
                 if not node.discovered and not node.isSpawn:
-                    pygame.draw.rect(pygame.display.get_surface(), "black", node.rect)
+                    if revealed_node:
+                        if not node in revealed_node:
+                            pygame.draw.rect(pygame.display.get_surface(), "black", node.rect)
+                    else:
+                        pygame.draw.rect(pygame.display.get_surface(), "black", node.rect)
 
     def setSpawn(self):
         for item in self.nodes:
@@ -110,4 +116,7 @@ class MapSystem:
         y = pos_y / self.sizeY
         x *= self.nodeX
         y *= self.nodeY
-        return self.nodes[round(y)][round(x)]
+        try:
+            return self.nodes[round(y)][round(x)]
+        except IndexError:
+            return None

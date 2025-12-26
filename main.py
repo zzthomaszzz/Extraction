@@ -124,7 +124,7 @@ pygame.init()
 game_map = pygame.image.load("asset/map.png")
 lobby = pygame.image.load("asset/lobby.png")
 soldier = pygame.image.load("asset/soldier.png")
-soldier_boost = pygame.image.load("asset/soldier_boostt.png")
+soldier_boost = pygame.image.load("asset/soldier_boost.png")
 alien = pygame.image.load("asset/alien.png")
 alien_rage = pygame.image.load("asset/alien_rage.png")
 mage = pygame.image.load("asset/mage.png")
@@ -459,6 +459,8 @@ win_condition = 100
 heal_zone_heal_per_second = 100
 point_per_second = 1
 
+revealed_node = []
+
 in_game = True
 dt = 0
 
@@ -501,6 +503,14 @@ def get_positions(_packet):
         if key != "team 1" and key != "team 2":
             coordinate = {"x": value["x"], "y": value["y"]}
             _data[key] = coordinate
+    return _data
+
+def get_healths(_packet):
+    _data = {}
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            health = {"hp": value["hp"]}
+            _data[key] = health
     return _data
 
 def update_team_points(_packet):
@@ -546,6 +556,14 @@ def draw_progress_bar():
     pygame.draw.rect(screen, "blue", team_2_progress_bar, 2)
     pygame.draw.rect(screen, "orange", team_2_progress)
 
+def reveal_area(position=None):
+    node_to_reveal = []
+    if position:
+        node = map_system.getNodeFromPos(position[0], position[1])
+        if node:
+            node_to_reveal.append(node)
+    return node_to_reveal
+
 while in_game:
 
     if player.isDead:
@@ -575,10 +593,13 @@ while in_game:
     dmg_received = get_damage_received(server_packet)
     heal_received = get_heal_received(server_packet)
 
-    player_pos = get_positions(server_packet)
-    slow_applied = player.get_slow_applied(enemyTeam, allyTeam, player_pos)
-    damage_dealt = player.get_damage_dealt(enemyTeam, player_pos)
-    heal_applied = player.get_heal_applied(allyTeam, player_pos)
+    all_player_position = get_positions(server_packet)
+    all_player_health = get_healths(server_packet)
+    slow_applied = player.get_slow_applied(enemyTeam, allyTeam, all_player_position)
+    damage_dealt = player.get_damage_dealt(enemyTeam, all_player_position)
+    heal_applied = player.get_heal_applied(allyTeam, all_player_position)
+
+    revealed_node = player.get_revealed_area(enemyTeam, allyTeam, all_player_position, all_player_health, map_system)
 
     player.update(dt)
 
@@ -700,7 +721,7 @@ while in_game:
     pygame.draw.rect(screen, to_color(client_color), current_hp_rect)
     pygame.draw.rect(screen, "green", current_hp_rect)
     #Drawing fog of war
-    map_system.draw()
+    map_system.draw(revealed_node)
 
     draw_progress_bar()
 

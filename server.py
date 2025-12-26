@@ -77,7 +77,6 @@ def process_data(data, _id):
                         if not lobby_packet["ready"][player]:
                             lobby_packet["start"] = False
             return lobby_packet
-
         case "packet":
             if data[1]["point"] != 0:
                 team_1 = lobby_packet["team 1"]

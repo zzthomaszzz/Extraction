@@ -133,6 +133,19 @@ class Player:
     def get_heal_applied(self, ally, position):
         return []
 
+    def get_revealed_area(self, enemyTeam, allyTeam, all_player_position, all_player_health, map_system):
+        revealed_area_in_nodes = []
+        for ally in allyTeam:
+            if ally in all_player_position:
+                x = all_player_position[ally]["x"]
+                y = all_player_position[ally]["y"]
+                node = map_system.getNodeFromPos(x, y)
+                adjacent_node = map_system.get_adjacent(node)
+                revealed_area_in_nodes.append(node)
+                for _node in adjacent_node:
+                    revealed_area_in_nodes.append(_node)
+        return revealed_area_in_nodes
+    
     def get_projectile(self):
         return []
 
@@ -406,8 +419,8 @@ class Mage(Player):
             self.projectile = []
             self.primary_state = 1
 
-    def secondary(self,node):
-        if not self.isCooldown:
+    def secondary(self, node):
+        if not self.isCooldown and node:
             if node.traversable == 1:
                 dist = math.hypot(node.rect.centerx - self.rect.centerx, node.rect.centery - self.rect.centery)
                 if dist <self.max_teleport_distance:
