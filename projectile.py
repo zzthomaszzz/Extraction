@@ -9,7 +9,7 @@ bullet_speed = 800
 
 #####
 #Fire zone
-fire_zone_damage = 40
+fire_zone_damage = 20
 fire_zone_speed = 150
 fire_zone_slow = 0.75
 
@@ -19,7 +19,7 @@ spike_damage = 30
 
 #####
 #Medic bullet
-med_heal = 20
+med_heal = 35
 med_speed = 600
 
 class Projectile:
@@ -38,7 +38,7 @@ class Bullet(Projectile):
         self.speed = bullet_speed
         self.damage = bullet_damage
         self.set_direction(destination)
-        self.trace_line = ((0, 0), (0, 0))
+        self.trace_line = ((x, y), (x, y))
         self.id = 2
 
     def set_damage(self, value):

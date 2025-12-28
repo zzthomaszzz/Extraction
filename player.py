@@ -67,11 +67,9 @@ medic_attack_speed = 0.5
 #SECONDARY
 medic_take_aim_slow = 0.25
 medic_take_aim_damage_multiplier = 5
-medic_take_aim_bullet_speed_multiplier = 2
+medic_take_aim_bullet_speed_multiplier = 1.5
 medic_take_aim_bonus_vision = 500
 medic_take_aim_cooldown = 8
-
-
 
 
 class Player:
@@ -182,7 +180,7 @@ class Soldier(Player):
                 rect = pygame.rect.Rect(x, y, 32, 32)
                 proj_list = self.projectile
                 for proj in proj_list:
-                    if rect.clipline(proj.get_trace_line):
+                    if rect.clipline(proj.get_trace_line()):
                         damage.append([key, proj.damage])
                         self.projectile.remove(proj)
         return damage
@@ -250,6 +248,12 @@ class Soldier(Player):
         for proj in self.projectile:
             data.append(proj.to_string())
         return data
+
+    def respawn(self):
+        self.isDead = False
+        self.health = soldier_health
+        self.speed = soldier_speed
+        self.vision = soldier_vision
 
 class Alien(Player):
 
@@ -367,6 +371,12 @@ class Alien(Player):
             return [self.projectile.to_string()]
         return []
 
+    def respawn(self):
+        self.isDead = False
+        self.health = alien_health
+        self.speed = alien_speed
+        self.vision = alien_vision
+
 class Mage(Player):
     def __init__(self, _id, location):
         super().__init__(_id, location)
@@ -483,6 +493,12 @@ class Mage(Player):
         self.primary_state = 1
         self.projectile = []
 
+    def respawn(self):
+        self.isDead = False
+        self.health = mage_health
+        self.speed = mage_speed
+        self.vision = mage_vision
+
 class MedicSniper(Player):
 
     def __init__(self, _id, location):
@@ -597,13 +613,24 @@ class MedicSniper(Player):
 
     def update_projectile(self, dt, obstacles):
         for bullet in self.projectile:
-            bullet.update(dt)
+            update_flag = 1
             if bullet.rect.x < 0 or bullet.rect.x + bullet.rect.width > 1280 or bullet.rect.y < 0 or bullet.rect.y + bullet.rect.height > 800:
                 self.projectile.remove(bullet)
+                update_flag = 0
             elif bullet.rect.collidelist(obstacles) != -1:
                 self.projectile.remove(bullet)
+                update_flag = 0
             elif bullet.id == 2:
                 for rect in obstacles:
                     if rect.clipline(bullet.get_trace_line()):
                         self.projectile.remove(bullet)
+                        update_flag = 0
                         break
+            if update_flag:
+                bullet.update(dt)
+
+    def respawn(self):
+        self.isDead = False
+        self.health = medic_health
+        self.speed = medic_speed
+        self.vision = medic_vision

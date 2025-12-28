@@ -582,6 +582,8 @@ while in_game:
 
     player.update(dt)
 
+    player.update_projectile(dt, obstacles)
+
     update_team_points(server_packet)
 
     player.heal(heal_received)
@@ -589,8 +591,6 @@ while in_game:
     player.take_damage(dmg_received)
 
     handle_player(player, speed_mod)
-
-    player.update_projectile(dt, obstacles)
 
     if player.rect.colliderect(capture_zone):
         point += dt * point_per_second
