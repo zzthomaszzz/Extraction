@@ -196,6 +196,14 @@ ready_status = False
 team_1 = []
 team_2 = []
 characters = {}
+players_tick = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+    6: 0
+}
 #-----------------------------------------------------------------------------------------------------------------------
 # LOBBY
 while in_lobby:
@@ -461,6 +469,7 @@ point_per_second = 1
 
 in_game = True
 dt = 0
+client_tick = 0
 
 #-----------------------------------------------------------------------------------------------------------------------
 #GAME
@@ -471,7 +480,7 @@ def get_heal_received(_packet):
         if key != "team 1" and key != "team 2":
             heal = value["heal"]
             for instance in heal:
-                if instance[0] == client_id:
+                if instance[0] == client_id and players_tick[key] != value["tick"]:
                     total_heal += instance[1]
     return total_heal
 
@@ -481,7 +490,7 @@ def get_damage_received(_packet):
         if key != "team 1" and key != "team 2":
             damage_received = value["dmg"]
             for instance in damage_received:
-                if instance[0] == client_id:
+                if instance[0] == client_id and players_tick[key] != value["tick"]:
                     total_damage += instance[1]
     return total_damage
 
@@ -494,6 +503,13 @@ def get_slow_received(_packet):
                 if instance[0] == client_id:
                     total_slow *= instance[1]
     return total_slow
+
+def update_tick(_packet):
+    for key, value in _packet.items():
+        if key != "team 1" and key != "team 2":
+            tick_value = value["tick"]
+            if tick_value != players_tick[key]:
+                players_tick[key] = tick_value
 
 def get_positions(_packet):
     _data = {}
@@ -556,6 +572,7 @@ while in_game:
             dead_counter += dt
 
     packet = {
+        "tick": client_tick,
         "x": player.rect.x,
         "y": player.rect.y,
         "hp": get_hp_percent(),
@@ -713,8 +730,10 @@ while in_game:
 
     # flip() the display to put your work on screen
     pygame.display.flip()
+    update_tick(server_packet)
 
     dt = clock.tick(30) / 1000
+    client_tick += 1
 
 win_image = None
 if winner == "Team 1":

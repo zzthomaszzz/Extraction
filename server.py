@@ -12,6 +12,7 @@ game_packet = {"team 1": 0.0, "team 2": 0.0}
 
 lobby_packet = {"team 1": [], "team 2": [], "characters": {}, "ready": {}, "start": False}
 
+FINISH_FLAG = False
 
 #Team Data
 
@@ -90,6 +91,12 @@ def process_data(data, _id):
                     game_packet["team 2"] += data[1]["point"]
                     if game_packet["team 2"] < 0:
                         game_packet["team 2"] = 0
+                if game_packet["team 2"] >= 100 or game_packet["team 1"] >= 100 and not FINISH_FLAG:
+                    global FINISH_FLAG
+                    FINISH_FLAG = True
+                    print("Game finished")
+                    print(lobby_packet)
+                    print(game_packet)
             game_packet[_id] = data[1]
             print(sys.getsizeof(pickle.dumps(game_packet)))
             return game_packet
